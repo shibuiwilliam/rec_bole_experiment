@@ -115,7 +115,7 @@ def create_config():
         # カテゴリ特徴量の設定
         "categorical_features": ["gender", "category"],
         # 学習設定
-        "epochs": 30,  # 複数モデル比較のため短縮
+        "epochs": 100,  # 複数モデル比較のため短縮
         "learning_rate": 0.001,
         "train_batch_size": 2048,
         "eval_batch_size": 2048,
@@ -127,7 +127,7 @@ def create_config():
             "mode": "labeled",  # CTR予測用
         },
         # 評価指標 (CTR予測用のvalue metrics)
-        "metrics": ["AUC", "LogLoss"],
+        "metrics": ["AUC", "LogLoss", "MAE", "RMSE"],
         "metric_decimal_place": 4,
         # DeepFMの設定
         "embedding_size": 64,
@@ -165,27 +165,80 @@ def train_and_evaluate():
     return result
 
 
-def advanced_model_comparison():
-    """複数のモデルを比較"""
+def quick_model_comparison():
+    """主要モデルの高速比較"""
 
-    print("=== 複数モデルの比較 ===")
+    print("=== 主要モデルの高速比較 ===")
 
-    # CTR予測に適したモデルのリスト
+    # 代表的なモデルの選抜（各カテゴリから主要モデル）
     models = [
-        "LR",  # Logistic Regression - シンプルなベースライン
-        "FM",  # Factorization Machines - 特徴量交互作用をモデル化
-        "DeepFM",  # Deep Factorization Machines - FMとDNNの組み合わせ
-        "WideDeep",  # Wide & Deep - 記憶と汎化の両方をカバー
-        "xDeepFM",  # eXtreme Deep Factorization Machines - 明示的・暗黙的特徴量交互作用
-        "DCN",  # Deep & Cross Network - 特徴量クロスを自動学習
-        "NFM",  # Neural Factorization Machines - 高次特徴量交互作用
-        "AFM",  # Attentional Factorization Machines - アテンション機構付きFM
-        "AutoInt",  # AutoInt - 自動特徴量交互作用学習
-        "PNN",  # Product-based Neural Network - 積ベースのネットワーク
+        "LR",  # Context-aware ベースライン
+        "FM",  # Context-aware 基本的な交互作用
+        "DeepFM",  # Context-aware 深層学習+FM
+        "WideDeep",  # Context-aware Wide & Deep
+        "DCN",  # Context-aware 自動特徴量クロス
+        "AutoInt",  # Context-aware 自動交互作用学習
+        "Pop",  # General 人気度
+        "BPR",  # General 協調フィルタリング
+        "SASRec",  # Sequential 自己注意機構
     ]
-    results = {}
 
+    return _run_model_comparison(models, "quick")
+
+
+def advanced_model_comparison():
+    """全モデルの詳細比較"""
+
+    print("=== 全モデルの詳細比較 ===")
+
+    # 様々な推薦手法を含む包括的なモデルリスト
+    models = [
+        # Context-aware Models (CTR予測・特徴量活用)
+        "LR",  # Logistic Regression - 線形ベースライン
+        "FM",  # Factorization Machines - 特徴量交互作用
+        "FFM",  # Field-aware FM - フィールド別特徴量交互作用
+        "FNN",  # Factorization NN - FM初期化+深層学習
+        "DeepFM",  # Deep + FM - 深層学習とFMの組み合わせ
+        "NFM",  # Neural FM - 高次特徴量交互作用
+        "AFM",  # Attentional FM - アテンション機構付きFM
+        "PNN",  # Product-based NN - 積ベース深層学習
+        "WideDeep",  # Wide & Deep - 記憶と汎化の両立
+        "DCN",  # Deep & Cross Network - 自動特徴量クロス
+        "DCNV2",  # DCN V2 - 改良版Deep & Cross
+        "xDeepFM",  # eXtreme DeepFM - 明示的・暗黙的交互作用
+        "AutoInt",  # AutoInt - 自動特徴量交互作用学習
+        "FwFM",  # Field-weighted FM - フィールド重み付きFM
+        "FiGNN",  # Field-matrixed FM + GNN - グラフニューラル
+        "DIN",  # Deep Interest Network - 動的注意機構
+        "DIEN",  # Deep Interest Evolution Network - 興味進化
+        "DSSM",  # Deep Structured Semantic Model - 意味マッチング
+        # General Recommender Models (協調フィルタリング)
+        "Pop",  # Popularity - 人気度ベースライン
+        "ItemKNN",  # Item-based KNN - アイテム協調フィルタリング
+        "BPR",  # Bayesian Personalized Ranking - ペアワイズ学習
+        "NeuMF",  # Neural Matrix Factorization - 深層学習MF
+        "LightGCN",  # Light Graph Convolutional Network - 軽量GCN
+        "NGCF",  # Neural Graph Collaborative Filtering - グラフ協調
+        "DGCF",  # Disentangled Graph Collaborative Filtering - 分離グラフ
+        # Sequential Recommendation Models (系列推薦)
+        "GRU4Rec",  # GRU for Recommendation - RNN系列推薦
+        "SASRec",  # Self-Attention Sequential Rec - 自己注意系列
+        "BERT4Rec",  # BERT for Recommendation - BERT系列推薦
+        "Caser",  # Convolutional Sequence Embedding - 畳み込み系列
+        "NARM",  # Neural Attention Recommendation - 注意系列
+    ]
+
+    return _run_model_comparison(models, "full")
+
+
+def _run_model_comparison(models, mode="full"):
+    """モデル比較の共通実装"""
+    results = {}
     base_config = create_config()
+
+    # クイックモードでは少ないエポック数で実行
+    if mode == "quick":
+        base_config["epochs"] = 15
 
     for model_name in models:
         print(f"\n--- {model_name} の学習 ---")
@@ -195,32 +248,102 @@ def advanced_model_comparison():
 
         # モデル固有の設定
         if model_name == "LR":
-            # Logistic Regressionは単純な線形モデル
             config_dict["epochs"] = 20
         elif model_name == "FM":
-            # Factorization Machinesの埋め込みサイズ
             config_dict["embedding_size"] = 32
-        elif model_name == "WideDeep":
-            # Wide & Deep固有の設定
+        elif model_name == "FFM":
+            config_dict["embedding_size"] = 32
+        elif model_name == "FNN":
             config_dict["mlp_hidden_size"] = [128, 64]
-        elif model_name == "xDeepFM":
-            # xDeepFM固有の設定
-            config_dict["cin_layer_size"] = [128, 128]
-            config_dict["direct"] = True
-        elif model_name == "DCN":
-            # Deep & Cross Network固有の設定
-            config_dict["cross_layer_num"] = 3
+            config_dict["dropout_prob"] = 0.2
+        elif model_name == "NFM":
+            config_dict["mlp_hidden_size"] = [128, 64]
+            config_dict["dropout_prob"] = 0.2
         elif model_name == "AFM":
-            # Attentional FM固有の設定
             config_dict["attention_size"] = 32
-        elif model_name == "AutoInt":
-            # AutoInt固有の設定
-            config_dict["attention_layers"] = 3
-            config_dict["num_heads"] = 2
+            config_dict["dropout_prob"] = 0.2
         elif model_name == "PNN":
-            # PNN固有の設定
             config_dict["use_inner"] = True
             config_dict["use_outer"] = False
+            config_dict["mlp_hidden_size"] = [128, 64]
+        elif model_name == "WideDeep":
+            config_dict["mlp_hidden_size"] = [128, 64]
+        elif model_name == "DCN":
+            config_dict["cross_layer_num"] = 3
+            config_dict["mlp_hidden_size"] = [128, 64]
+        elif model_name == "DCNV2":
+            config_dict["cross_layer_num"] = 3
+            config_dict["mlp_hidden_size"] = [128, 64]
+        elif model_name == "xDeepFM":
+            config_dict["cin_layer_size"] = [128, 128]
+            config_dict["direct"] = True
+            config_dict["mlp_hidden_size"] = [128, 64]
+        elif model_name == "AutoInt":
+            config_dict["attention_layers"] = 3
+            config_dict["num_heads"] = 2
+        elif model_name == "FwFM":
+            config_dict["embedding_size"] = 32
+        elif model_name == "FiGNN":
+            config_dict["num_layers"] = 3
+            config_dict["embedding_size"] = 32
+        # General recommender models
+        elif model_name == "Pop":
+            config_dict["epochs"] = 1  # 人気度モデルは学習不要
+        elif model_name == "ItemKNN":
+            config_dict["k"] = 50
+        elif model_name == "BPR":
+            config_dict["embedding_size"] = 64
+        elif model_name == "NeuMF":
+            config_dict["mf_embedding_size"] = 32
+            config_dict["mlp_embedding_size"] = 32
+            config_dict["mlp_hidden_size"] = [128, 64, 32]
+        # Additional context-aware models
+        elif model_name == "DIN":
+            config_dict["mlp_hidden_size"] = [128, 64]
+            config_dict["attention_mlp_layers"] = [64, 32]
+        elif model_name == "DIEN":
+            config_dict["mlp_hidden_size"] = [128, 64]
+            config_dict["gru_hidden_size"] = 64
+        elif model_name == "DSSM":
+            config_dict["mlp_hidden_size"] = [128, 64]
+        # Additional general recommender models
+        elif model_name == "LightGCN":
+            config_dict["n_layers"] = 3
+            config_dict["embedding_size"] = 64
+        elif model_name == "NGCF":
+            config_dict["n_layers"] = 3
+            config_dict["embedding_size"] = 64
+            config_dict["node_dropout"] = 0.1
+            config_dict["message_dropout"] = 0.1
+        elif model_name == "DGCF":
+            config_dict["n_layers"] = 3
+            config_dict["embedding_size"] = 64
+            config_dict["n_factors"] = 4
+        # Sequential recommendation models
+        elif model_name == "GRU4Rec":
+            config_dict["embedding_size"] = 64
+            config_dict["hidden_size"] = 128
+            config_dict["num_layers"] = 1
+        elif model_name == "SASRec":
+            config_dict["n_layers"] = 2
+            config_dict["n_heads"] = 2
+            config_dict["hidden_size"] = 64
+            config_dict["inner_size"] = 256
+            config_dict["dropout_prob"] = 0.2
+        elif model_name == "BERT4Rec":
+            config_dict["n_layers"] = 2
+            config_dict["n_heads"] = 2
+            config_dict["hidden_size"] = 64
+            config_dict["inner_size"] = 256
+            config_dict["dropout_prob"] = 0.2
+        elif model_name == "Caser":
+            config_dict["embedding_size"] = 64
+            config_dict["nv"] = 8
+            config_dict["nh"] = 16
+            config_dict["dropout_prob"] = 0.2
+        elif model_name == "NARM":
+            config_dict["embedding_size"] = 64
+            config_dict["hidden_size"] = 128
 
         try:
             result = run_recbole(
@@ -230,7 +353,11 @@ def advanced_model_comparison():
             test_result = result.get("test_result", {})
             auc = test_result.get("auc", "N/A")
             logloss = test_result.get("logloss", "N/A")
-            print(f"{model_name} 完了: AUC = {auc}, LogLoss = {logloss}")
+            mae = test_result.get("mae", "N/A")
+            rmse = test_result.get("rmse", "N/A")
+            print(
+                f"{model_name} 完了: AUC = {auc}, LogLoss = {logloss} MAE = {mae}, RMSE = {rmse}"
+            )
 
         except Exception as e:
             print(f"{model_name} でエラー: {str(e)}")
@@ -238,7 +365,9 @@ def advanced_model_comparison():
 
     # 結果の比較とランキング
     print("\n=== モデル比較結果 ===")
-    print(f"{'Model':<12} {'AUC':<8} {'LogLoss':<10} {'Description':<50}")
+    print(
+        f"{'Model':<12} {'AUC':<8} {'LogLoss':<10} {'MAE':<10} {'RMSE':<10} {'Description':<50}"
+    )
     print("-" * 80)
 
     # AUCでソート（降順）
@@ -249,28 +378,57 @@ def advanced_model_comparison():
     )
 
     model_descriptions = {
-        "LR": "Logistic Regression (ベースライン)",
+        # Context-aware Models
+        "LR": "Logistic Regression (線形ベースライン)",
         "FM": "Factorization Machines (特徴量交互作用)",
+        "FFM": "Field-aware FM (フィールド別特徴量交互作用)",
+        "FNN": "Factorization NN (FM初期化+深層学習)",
         "DeepFM": "Deep + FM (深層学習とFMの組み合わせ)",
-        "WideDeep": "Wide & Deep (記憶と汎化)",
-        "xDeepFM": "eXtreme DeepFM (明示的・暗黙的交互作用)",
-        "DCN": "Deep & Cross Network (自動特徴量クロス)",
         "NFM": "Neural FM (高次特徴量交互作用)",
-        "AFM": "Attentional FM (アテンション機構)",
+        "AFM": "Attentional FM (アテンション機構付きFM)",
+        "PNN": "Product-based NN (積ベース深層学習)",
+        "WideDeep": "Wide & Deep (記憶と汎化の両立)",
+        "DCN": "Deep & Cross Network (自動特徴量クロス)",
+        "DCNV2": "DCN V2 (改良版Deep & Cross)",
+        "xDeepFM": "eXtreme DeepFM (明示的・暗黙的交互作用)",
         "AutoInt": "AutoInt (自動特徴量交互作用学習)",
-        "PNN": "Product-based Neural Network (積ベース)",
+        "FwFM": "Field-weighted FM (フィールド重み付きFM)",
+        "FiGNN": "Field-matrixed FM + GNN (グラフニューラル)",
+        "DIN": "Deep Interest Network (動的注意機構)",
+        "DIEN": "Deep Interest Evolution Network (興味進化)",
+        "DSSM": "Deep Structured Semantic Model (意味マッチング)",
+        # General Recommender Models
+        "Pop": "Popularity (人気度ベースライン)",
+        "ItemKNN": "Item-based KNN (アイテム協調フィルタリング)",
+        "BPR": "Bayesian Personalized Ranking (ペアワイズ学習)",
+        "NeuMF": "Neural Matrix Factorization (深層学習MF)",
+        "LightGCN": "Light Graph Convolutional Network (軽量GCN)",
+        "NGCF": "Neural Graph Collaborative Filtering (グラフ協調)",
+        "DGCF": "Disentangled Graph Collaborative Filtering (分離グラフ)",
+        # Sequential Recommendation Models
+        "GRU4Rec": "GRU for Recommendation (RNN系列推薦)",
+        "SASRec": "Self-Attention Sequential Rec (自己注意系列)",
+        "BERT4Rec": "BERT for Recommendation (BERT系列推薦)",
+        "Caser": "Convolutional Sequence Embedding (畳み込み系列)",
+        "NARM": "Neural Attention Recommendation (注意系列)",
     }
 
     for model_name, result in sorted_results:
         test_result = result.get("test_result", {})
         auc = test_result.get("auc", "N/A")
         logloss = test_result.get("logloss", "N/A")
+        mae = test_result.get("mae", "N/A")
+        rmse = test_result.get("rmse", "N/A")
         description = model_descriptions.get(model_name, "")
 
         auc_str = f"{auc:.4f}" if isinstance(auc, float) else str(auc)
         logloss_str = f"{logloss:.4f}" if isinstance(logloss, float) else str(logloss)
+        mae_str = f"{mae:.4f}" if isinstance(mae, float) else str(mae)
+        rmse_str = f"{rmse:.4f}" if isinstance(rmse, float) else str(rmse)
 
-        print(f"{model_name:<12} {auc_str:<8} {logloss_str:<10} {description:<50}")
+        print(
+            f"{model_name:<12} {auc_str:<8} {logloss_str:<10} {mae_str:<10} {rmse_str:<10} {description:<50}"
+        )
 
     return results
 
@@ -311,9 +469,15 @@ if __name__ == "__main__":
     # 基本的な学習と評価
     result = train_and_evaluate()
 
-    # 複数モデルの比較
+    # モデル比較の選択
     print("\n" + "=" * 50)
-    advanced_results = advanced_model_comparison()
+    print("モデル比較を実行します...")
+
+    # まず主要モデルの高速比較（代表的な9モデル）
+    quick_results = quick_model_comparison()
+
+    # 詳細比較も実行する場合（全32+モデル - 時間がかかるのでコメントアウト推奨）
+    # advanced_results = advanced_model_comparison()
 
     # 予測の準備（概念的な例）
     # predict_click_probability()
