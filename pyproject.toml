@@ -1,0 +1,26 @@
+[project]
+name = "rec-bole-experiment"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13.2"
+dependencies = [
+    "kmeans-pytorch>=0.3",
+    "lightgbm>=4.6.0",
+    "numpy<2",
+    "pandas>=2.3.0",
+    "plotly>=6.1.2",
+    "polars>=1.31.0",
+    "pyarrow>=20.0.0",
+    "pydantic>=2.11.7",
+    "ray>=2.47.1",
+    "recbole>=1.2.0",
+    "scikit-learn>=1.7.0",
+]
+
+[dependency-groups]
+dev = [
+    "isort>=6.0.1",
+    "mypy>=1.16.1",
+    "ruff>=0.12.0",
+]
