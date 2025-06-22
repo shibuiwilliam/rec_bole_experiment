@@ -29,7 +29,9 @@ class DataGenerator:
     """サンプルデータ生成クラス"""
 
     @staticmethod
-    def create_sample_data() -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    def create_sample_data(
+        eval_mode: str = "labeled",
+    ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
         """サンプルデータの作成"""
         # ユーザーデータの作成
         n_users = 1000
@@ -51,20 +53,49 @@ class DataGenerator:
         }
         items_df = pd.DataFrame(items_data)
 
-        # インタラクションデータの作成（PVとクリック）
+        # インタラクションデータの作成（ランキング評価も考慮した形式）
         n_interactions = 10000
+
+        # ユーザーごとに少なくとも数個のインタラクションを持つようにする
         interactions_data = {
-            "user_id:token": np.random.choice(
-                users_df["user_id:token"], n_interactions
-            ),
-            "item_id:token": np.random.choice(
-                items_df["item_id:token"], n_interactions
-            ),
-            "label:float": np.random.choice([0, 1], n_interactions, p=[0.8, 0.2]),
-            "timestamp:float": np.random.randint(
-                1000000000, 1700000000, n_interactions
-            ),
+            "user_id:token": [],
+            "item_id:token": [],
+            "label:float": [],
+            "timestamp:float": [],
         }
+
+        # 評価モードに応じてデータ形式を調整
+        if eval_mode == "full":
+            # ランキング評価用：各ユーザーに正例のみ
+            for user_id in users_df["user_id:token"]:
+                n_user_interactions = np.random.randint(5, 15)  # ユーザーあたり5-15個
+                if n_user_interactions > len(items_df):
+                    n_user_interactions = len(items_df) // 2
+                user_items = np.random.choice(
+                    items_df["item_id:token"], n_user_interactions, replace=False
+                )
+                user_ratings = np.ones(n_user_interactions)  # 全て正例（1）
+                user_timestamps = np.random.randint(
+                    1000000000, 1700000000, n_user_interactions
+                )
+
+                interactions_data["user_id:token"].extend(
+                    [user_id] * n_user_interactions
+                )
+                interactions_data["item_id:token"].extend(user_items)
+                interactions_data["label:float"].extend(user_ratings)
+                interactions_data["timestamp:float"].extend(user_timestamps)
+        else:
+            # CTR予測用：正例・負例の混在
+            users_sample = np.random.choice(users_df["user_id:token"], n_interactions)
+            items_sample = np.random.choice(items_df["item_id:token"], n_interactions)
+            labels = np.random.choice([0, 1], n_interactions, p=[0.8, 0.2])
+            timestamps = np.random.randint(1000000000, 1700000000, n_interactions)
+
+            interactions_data["user_id:token"] = users_sample.tolist()
+            interactions_data["item_id:token"] = items_sample.tolist()
+            interactions_data["label:float"] = labels.tolist()
+            interactions_data["timestamp:float"] = timestamps.tolist()
         interactions_df = pd.DataFrame(interactions_data)
 
         return users_df, items_df, interactions_df
@@ -93,13 +124,62 @@ class DataGenerator:
         print(f"データファイルを {data_path} に保存しました")
 
 
+class MetricsManager:
+    """評価指標管理クラス"""
+
+    # 評価指標の定義
+    RANKING_METRICS = ["Recall", "MRR", "NDCG", "Hit", "Precision"]
+    VALUE_METRICS = ["AUC", "LogLoss", "MAE", "RMSE"]
+
+    @classmethod
+    def get_ranking_metrics(cls) -> List[str]:
+        """ランキング指標を取得"""
+        return cls.RANKING_METRICS
+
+    @classmethod
+    def get_value_metrics(cls) -> List[str]:
+        """値ベース指標を取得"""
+        return cls.VALUE_METRICS
+
+    @classmethod
+    def get_all_metrics(cls) -> List[str]:
+        """全指標を取得"""
+        return cls.RANKING_METRICS + cls.VALUE_METRICS
+
+    @staticmethod
+    def determine_metrics_for_model(
+        model_name: str, eval_mode: str = "labeled"
+    ) -> List[str]:
+        """モデルと評価モードに基づいて適切な指標を決定"""
+        context_aware_models = ModelRegistry.CONTEXT_AWARE_MODELS
+
+        # Context-aware modelsは通常value metricsを使用
+        if model_name in context_aware_models:
+            return MetricsManager.VALUE_METRICS
+
+        # General/Sequential modelsの場合、評価モードに依存
+        if eval_mode == "labeled":
+            return MetricsManager.VALUE_METRICS
+        else:
+            return MetricsManager.RANKING_METRICS
+
+
 class ConfigManager:
     """設定管理クラス"""
 
     @staticmethod
-    def create_base_config() -> Dict[str, Any]:
+    def create_base_config(
+        metrics: List[str] = None, eval_mode: str = "labeled"
+    ) -> Dict[str, Any]:
         """RecBoleの基本設定"""
-        return {
+        # デフォルトの指標設定
+        if metrics is None:
+            metrics = MetricsManager.VALUE_METRICS
+
+        # 評価モードの設定
+        eval_mode_config = "labeled" if eval_mode == "labeled" else "full"
+
+        config = {
             # データセット設定
             "dataset": "click_prediction",
             "data_path": "dataset/",
@@ -125,15 +205,17 @@ class ConfigManager:
             "learning_rate": 0.001,
             "train_batch_size": 2048,
             "eval_batch_size": 2048,
+            "stopping_step": 5,
+            "eval_step": 5,
             # 評価設定
             "eval_args": {
                 "split": {"RS": [0.8, 0.1, 0.1]},
                 "group_by": None,
                 "order": "TO",
-                "mode": "labeled",
+                "mode": eval_mode_config,
             },
-            # 評価指標
-            "metrics": ["AUC", "LogLoss", "MAE", "RMSE"],
+            # 評価指標（動的設定）
+            "metrics": metrics,
             "metric_decimal_place": 4,
             # デフォルトモデル設定
             "embedding_size": 64,
@@ -144,6 +226,22 @@ class ConfigManager:
             "reproducibility": True,
             "state": "INFO",
         }
+
+        # ランキング指標の場合はtopkを追加
+        if any(metric in MetricsManager.RANKING_METRICS for metric in metrics):
+            config["topk"] = [10, 20]
+
+        # ランキング指標の場合は負サンプリング設定を調整
+        if any(metric in MetricsManager.RANKING_METRICS for metric in metrics):
+            config["train_neg_sample_args"] = {
+                "distribution": "uniform",
+                "sample_num": 1,
+                "alpha": 1.0,
+                "dynamic": False,
+                "candidate_num": 0,
+            }
+
+        return config
 
 
 class ModelRegistry:
@@ -197,6 +295,21 @@ class ModelRegistry:
     def get_quick_models(cls) -> List[str]:
         """代表的なモデルのリストを取得"""
         return cls.QUICK_MODELS
+
+    @classmethod
+    def get_context_aware_models(cls) -> List[str]:
+        """コンテキスト対応モデルのリストを取得"""
+        return cls.CONTEXT_AWARE_MODELS
+
+    @classmethod
+    def get_general_models(cls) -> List[str]:
+        """一般的な推薦モデルのリストを取得"""
+        return cls.GENERAL_MODELS
+
+    @classmethod
+    def get_sequential_models(cls) -> List[str]:
+        """系列推薦モデルのリストを取得"""
+        return cls.SEQUENTIAL_MODELS
 
     @staticmethod
     def get_model_config(
@@ -320,12 +433,22 @@ class ModelTrainer:
     def __init__(self, config_manager: ConfigManager):
         self.config_manager = config_manager
 
-    def train_single_model(self, model_name: str = "DeepFM") -> Dict[str, Any]:
+    def train_single_model(
+        self,
+        model_name: str = "DeepFM",
+        metrics: List[str] = None,
+        eval_mode: str = "labeled",
+    ) -> Dict[str, Any]:
         """単一モデルの学習と評価"""
         print(f"=== {model_name} モデルの学習開始 ===")
 
+        # 指標が指定されていない場合は自動選択
+        if metrics is None:
+            metrics = MetricsManager.determine_metrics_for_model(model_name, eval_mode)
+            print(f"使用する評価指標: {metrics}")
+
         config_dict = ModelRegistry.get_model_config(
-            model_name, self.config_manager.create_base_config()
+            model_name, self.config_manager.create_base_config(metrics, eval_mode)
         )
 
         result = run_recbole(
@@ -336,14 +459,15 @@ class ModelTrainer:
         print(f"テスト結果: {result}")
         return result
 
-    def compare_models(self, models: List[str], mode: str = "full") -> Dict[str, Any]:
+    def compare_models(
+        self,
+        models: List[str],
+        mode: str = "full",
+        metrics: List[str] = None,
+        eval_mode: str = "labeled",
+    ) -> Dict[str, Any]:
         """複数モデルの比較"""
         results = {}
-        base_config = self.config_manager.create_base_config()
-
-        # クイックモードでは少ないエポック数で実行
-        if mode == "quick":
-            base_config["epochs"] = 15
 
         print(f"=== {len(models)} モデルの比較実行 ===")
 
@@ -351,6 +475,23 @@ class ModelTrainer:
             print(f"\n--- {model_name} の学習 ---")
 
             try:
+                # モデルごとに適切な指標を選択
+                model_metrics = (
+                    metrics
+                    if metrics
+                    else MetricsManager.determine_metrics_for_model(
+                        model_name, eval_mode
+                    )
+                )
+
+                base_config = self.config_manager.create_base_config(
+                    model_metrics, eval_mode
+                )
+
+                # クイックモードでは少ないエポック数で実行
+                if mode == "quick":
+                    base_config["epochs"] = 15
+
                 config_dict = ModelRegistry.get_model_config(model_name, base_config)
                 result = run_recbole(
                     model=model_name,
@@ -360,37 +501,115 @@ class ModelTrainer:
                 results[model_name] = result
 
                 test_result = result.get("test_result", {})
-                metrics = {
-                    k: test_result.get(k, "N/A")
-                    for k in ["auc", "logloss", "mae", "rmse"]
-                }
+                # 動的に使用されている指標を表示（@topk付きも考慮）
+                metrics_display = {}
+                for metric in model_metrics:
+                    metric_lower = metric.lower()
+                    # 直接一致を探す
+                    if metric_lower in test_result:
+                        metrics_display[metric_lower] = test_result[metric_lower]
+                    else:
+                        # @topk付きの指標を探す（例: recall@10, ndcg@10）
+                        for key, value in test_result.items():
+                            if key.startswith(metric_lower + "@"):
+                                metrics_display[key] = value
+                                break
+                        else:
+                            metrics_display[metric_lower] = "N/A"
                 print(
                     f"{model_name} 完了: "
-                    + ", ".join([f"{k.upper()}={v}" for k, v in metrics.items()])
+                    + ", ".join(
+                        [f"{k.upper()}={v}" for k, v in metrics_display.items()]
+                    )
                 )
 
             except Exception as e:
                 print(f"{model_name} でエラー: {str(e)}")
                 continue
 
-        self._display_results(results)
+        self._display_results(results, metrics)
         return results
 
-    def _display_results(self, results: Dict[str, Any]) -> None:
+    def _display_results(
+        self, results: Dict[str, Any], custom_metrics: List[str] = None
+    ) -> None:
         """結果の表示"""
         if not results:
             print("実行可能なモデルがありませんでした")
             return
 
+        # 表示する指標を決定
+        if custom_metrics:
+            # カスタム指標の場合、@topk付きも考慮
+            display_metrics = []
+            for metric in custom_metrics:
+                metric_lower = metric.lower()
+                display_metrics.append(metric_lower)
+        else:
+            # 結果から利用可能な指標を抽出
+            all_metrics = set()
+            for result in results.values():
+                test_result = result.get("test_result", {})
+                all_metrics.update(test_result.keys())
+
+            # 優先順位に従って表示指標を選択（@topk付きも考慮）
+            priority_metrics = [
+                "auc",
+                "recall@10",
+                "ndcg@10",
+                "mrr@10",
+                "precision@10",
+                "hit@10",
+                "logloss",
+                "mae",
+                "rmse",
+            ]
+            display_metrics = []
+            for metric in priority_metrics:
+                if metric in all_metrics:
+                    display_metrics.append(metric)
+                elif any(m.startswith(metric.split("@")[0] + "@") for m in all_metrics):
+                    # @topk付きの指標がある場合は最初に見つかったものを使用
+                    for m in all_metrics:
+                        if m.startswith(metric.split("@")[0] + "@"):
+                            display_metrics.append(m)
+                            break
+                if len(display_metrics) >= 4:
+                    break
+
         print("\n=== モデル比較結果 ===")
-        header = f"{'Model':<12} {'AUC':<8} {'LogLoss':<10} {'MAE':<10} {'RMSE':<10} {'Description':<50}"
+
+        # 動的ヘッダー生成
+        metric_headers = [m.upper() for m in display_metrics]
+        header_parts = (
+            ["Model"] + [f"{m:<10}" for m in metric_headers] + ["Description"]
+        )
+        header = "".join(
+            [f"{header_parts[0]:<12}"]
+            + header_parts[1:-1]
+            + [f"{header_parts[-1]:<50}"]
+        )
         print(header)
         print("-" * len(header))
 
-        # AUCでソート（降順）
+        # ソート用の主要指標を決定（AUC > Recall@10 > NDCG@10 > その他の順）
+        sort_metric = display_metrics[0] if display_metrics else "auc"
+        for preferred in ["auc", "recall@10", "ndcg@10", "mrr@10"]:
+            if preferred in display_metrics:
+                sort_metric = preferred
+                break
+            # @topk付きの指標もチェック
+            for metric in display_metrics:
+                if metric.startswith(preferred.split("@")[0] + "@"):
+                    sort_metric = metric
+                    break
+            if sort_metric != display_metrics[0]:
+                break
+
+        # 結果をソート
         sorted_results = sorted(
             results.items(),
-            key=lambda x: x[1].get("test_result", {}).get("auc", 0),
+            key=lambda x: x[1].get("test_result", {}).get(sort_metric, 0),
             reverse=True,
         )
 
@@ -398,27 +617,27 @@ class ModelTrainer:
 
         for model_name, result in sorted_results:
             test_result = result.get("test_result", {})
-            metrics = {
-                "auc": test_result.get("auc", "N/A"),
-                "logloss": test_result.get("logloss", "N/A"),
-                "mae": test_result.get("mae", "N/A"),
-                "rmse": test_result.get("rmse", "N/A"),
-            }
 
-            formatted_metrics = {
-                k: f"{v:.4f}" if isinstance(v, float) else str(v)
-                for k, v in metrics.items()
-            }
+            # 指標値を取得してフォーマット
+            metric_values = []
+            for metric in display_metrics:
+                value = test_result.get(metric, "N/A")
+                # @topk付きの指標も確認
+                if value == "N/A" and "@" not in metric:
+                    # @10付きのバージョンを探す
+                    alt_metric = f"{metric}@10"
+                    value = test_result.get(alt_metric, "N/A")
+
+                formatted_value = (
+                    f"{value:.4f}" if isinstance(value, float) else str(value)
+                )
+                metric_values.append(f"{formatted_value:<10}")
 
             description = descriptions.get(model_name, "")
-            print(
-                f"{model_name:<12} "
-                f"{formatted_metrics['auc']:<8} "
-                f"{formatted_metrics['logloss']:<10} "
-                f"{formatted_metrics['mae']:<10} "
-                f"{formatted_metrics['rmse']:<10} "
-                f"{description:<50}"
-            )
+
+            # 行を構築
+            row_parts = [f"{model_name:<12}"] + metric_values + [f"{description:<50}"]
+            print("".join(row_parts))
 
 
 class ClickPredictionExperiment:
@@ -429,30 +648,85 @@ class ClickPredictionExperiment:
         self.config_manager = ConfigManager()
         self.trainer = ModelTrainer(self.config_manager)
 
-    def setup_data(self) -> None:
+    def setup_data(self, eval_mode: str = "labeled") -> None:
         """データ準備"""
         print("=== データ準備 ===")
-        users_df, items_df, interactions_df = self.data_generator.create_sample_data()
+        users_df, items_df, interactions_df = self.data_generator.create_sample_data(
+            eval_mode
+        )
         self.data_generator.prepare_recbole_data(users_df, items_df, interactions_df)
 
-    def run_single_model_experiment(self, model_name: str = "DeepFM") -> Dict[str, Any]:
+    def run_single_model_experiment(
+        self,
+        model_name: str = "DeepFM",
+        metrics: List[str] = None,
+        eval_mode: str = "labeled",
+    ) -> Dict[str, Any]:
         """単一モデル実験"""
-        self.setup_data()
-        return self.trainer.train_single_model(model_name)
+        self.setup_data(eval_mode)
+        return self.trainer.train_single_model(model_name, metrics, eval_mode)
 
-    def run_quick_comparison(self) -> Dict[str, Any]:
+    def run_quick_comparison(
+        self, metrics: List[str] = None, eval_mode: str = "labeled"
+    ) -> Dict[str, Any]:
         """主要モデルの高速比較"""
         print("=== 主要モデルの高速比較 ===")
-        self.setup_data()
+        self.setup_data(eval_mode)
         models = ModelRegistry.get_quick_models()
-        return self.trainer.compare_models(models, mode="quick")
+        return self.trainer.compare_models(
+            models, mode="quick", metrics=metrics, eval_mode=eval_mode
+        )
 
-    def run_comprehensive_comparison(self) -> Dict[str, Any]:
+    def run_comprehensive_comparison(
+        self, metrics: List[str] = None, eval_mode: str = "labeled"
+    ) -> Dict[str, Any]:
         """全モデルの包括的比較"""
         print("=== 全モデルの包括的比較 ===")
-        self.setup_data()
+        self.setup_data(eval_mode)
         models = ModelRegistry.get_all_models()
-        return self.trainer.compare_models(models, mode="full")
+        return self.trainer.compare_models(
+            models, mode="full", metrics=metrics, eval_mode=eval_mode
+        )
+
+    def run_value_metrics_comparison(self) -> Dict[str, Any]:
+        """Value指標での比較"""
+        print("=== Value指標での比較 ===")
+        self.setup_data("labeled")
+        models = ModelRegistry.get_quick_models()
+        metrics = MetricsManager.get_value_metrics()
+        return self.trainer.compare_models(
+            models, mode="quick", metrics=metrics, eval_mode="labeled"
+        )
+
+    def run_ranking_metrics_comparison(self) -> Dict[str, Any]:
+        """Ranking指標での比較"""
+        print("=== Ranking指標での比較 ===")
+        self.setup_data("full")  # ランキング評価用のデータ形式
+        # より互換性の高いモデルを選択
+        models = ["Pop", "BPR", "NeuMF"]  # 確実に動作するモデル
+        metrics = MetricsManager.get_ranking_metrics()
+        return self.trainer.compare_models(
+            models, mode="quick", metrics=metrics, eval_mode="full"
+        )
+
+    def run_custom_metrics_comparison(
+        self,
+        models: List[str] = None,
+        metrics: List[str] = None,
+        eval_mode: str = "labeled",
+    ) -> Dict[str, Any]:
+        """カスタム指標・モデルでの比較"""
+        print(f"=== カスタム比較 (指標: {metrics}, モード: {eval_mode}) ===")
+        self.setup_data(eval_mode)
+
+        if models is None:
+            models = ModelRegistry.get_quick_models()
+        if metrics is None:
+            metrics = MetricsManager.get_value_metrics()
+
+        return self.trainer.compare_models(
+            models, mode="quick", metrics=metrics, eval_mode=eval_mode
+        )
 
     def predict_click_probability(self) -> None:
         """クリック確率予測の例（概念的な実装）"""
@@ -481,21 +755,38 @@ def main():
     """メイン実行関数"""
     print("RecBoleを使ったアイテムクリック予測モデル")
     print("=" * 50)
+    print("利用可能な評価指標:")
+    print(f"  • Value指標: {MetricsManager.get_value_metrics()}")
+    print(f"  • Ranking指標: {MetricsManager.get_ranking_metrics()}")
 
     experiment = ClickPredictionExperiment()
 
-    # 基本的な学習と評価
-    experiment.run_single_model_experiment("DeepFM")
+    # 基本的な学習と評価（自動指標選択）
+    # experiment.run_single_model_experiment("DeepFM")
 
     # モデル比較の選択
     print("\n" + "=" * 50)
-    print("モデル比較を実行します...")
+    print("異なる評価指標での比較を実行します...")
 
-    # 主要モデルの高速比較（代表的な9モデル）
-    experiment.run_quick_comparison()
+    # 1. Value指標での比較（CTR予測に適している）
+    # print("\n" + "-" * 30)
+    # experiment.run_value_metrics_comparison()
+
+    # 2. Ranking指標での比較（推薦システムに適している）
+    print("\n" + "-" * 30)
+    experiment.run_ranking_metrics_comparison()
+
+    # 3. カスタム指標での比較例
+    # print("\n" + "-" * 30)
+    # experiment.run_custom_metrics_comparison(
+    #     models=["LR", "FM", "DeepFM"], metrics=["AUC", "LogLoss"], eval_mode="labeled"
+    # )
 
     # 詳細比較も実行する場合（全32+モデル - 時間がかかるのでコメントアウト推奨）
-    # comprehensive_results = experiment.run_comprehensive_comparison()
+    # comprehensive_results = experiment.run_comprehensive_comparison(
+    #     metrics=["AUC", "LogLoss", "MAE"],
+    #     eval_mode="labeled"
+    # )
 
     # 予測の準備（概念的な例）
     # experiment.predict_click_probability()
