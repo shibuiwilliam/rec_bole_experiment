@@ -1,4 +1,3 @@
-from unittest.mock import patch
 
 from src.recbole_experiment.utils.torch_compat import patched_torch_load
 
@@ -6,84 +5,84 @@ from src.recbole_experiment.utils.torch_compat import patched_torch_load
 class TestTorchPatch:
     """Test class for PyTorch compatibility patch"""
 
-    def test_patched_torch_load_without_weights_only(self):
+    def test_patched_torch_load_without_weights_only(self, mocker):
         """Test patched_torch_load adds weights_only=False when not present"""
-        with patch(
+        mock_original = mocker.patch(
             "src.recbole_experiment.utils.torch_compat.original_torch_load"
-        ) as mock_original:
-            mock_original.return_value = "mock_result"
+        )
+        mock_original.return_value = "mock_result"
 
-            result = patched_torch_load("model.pth")
+        result = patched_torch_load("model.pth")
 
-            mock_original.assert_called_once_with("model.pth", weights_only=False)
-            assert result == "mock_result"
+        mock_original.assert_called_once_with("model.pth", weights_only=False)
+        assert result == "mock_result"
 
-    def test_patched_torch_load_with_weights_only_true(self):
+    def test_patched_torch_load_with_weights_only_true(self, mocker):
         """Test patched_torch_load preserves weights_only=True"""
-        with patch(
+        mock_original = mocker.patch(
             "src.recbole_experiment.utils.torch_compat.original_torch_load"
-        ) as mock_original:
-            mock_original.return_value = "mock_result"
+        )
+        mock_original.return_value = "mock_result"
 
-            result = patched_torch_load("model.pth", weights_only=True)
+        result = patched_torch_load("model.pth", weights_only=True)
 
-            mock_original.assert_called_once_with("model.pth", weights_only=True)
-            assert result == "mock_result"
+        mock_original.assert_called_once_with("model.pth", weights_only=True)
+        assert result == "mock_result"
 
-    def test_patched_torch_load_with_weights_only_false(self):
+    def test_patched_torch_load_with_weights_only_false(self, mocker):
         """Test patched_torch_load preserves weights_only=False"""
-        with patch(
+        mock_original = mocker.patch(
             "src.recbole_experiment.utils.torch_compat.original_torch_load"
-        ) as mock_original:
-            mock_original.return_value = "mock_result"
+        )
+        mock_original.return_value = "mock_result"
 
-            result = patched_torch_load("model.pth", weights_only=False)
+        result = patched_torch_load("model.pth", weights_only=False)
 
-            mock_original.assert_called_once_with("model.pth", weights_only=False)
-            assert result == "mock_result"
+        mock_original.assert_called_once_with("model.pth", weights_only=False)
+        assert result == "mock_result"
 
-    def test_patched_torch_load_with_other_kwargs(self):
+    def test_patched_torch_load_with_other_kwargs(self, mocker):
         """Test patched_torch_load handles other kwargs"""
-        with patch(
+        mock_original = mocker.patch(
             "src.recbole_experiment.utils.torch_compat.original_torch_load"
-        ) as mock_original:
-            mock_original.return_value = "mock_result"
+        )
+        mock_original.return_value = "mock_result"
 
-            result = patched_torch_load(
-                "model.pth", map_location="cpu", pickle_module=None
-            )
+        result = patched_torch_load(
+            "model.pth", map_location="cpu", pickle_module=None
+        )
 
-            mock_original.assert_called_once_with(
-                "model.pth", map_location="cpu", pickle_module=None, weights_only=False
-            )
-            assert result == "mock_result"
+        mock_original.assert_called_once_with(
+            "model.pth", map_location="cpu", pickle_module=None, weights_only=False
+        )
+        assert result == "mock_result"
 
-    def test_patched_torch_load_with_mixed_kwargs(self):
+    def test_patched_torch_load_with_mixed_kwargs(self, mocker):
         """Test patched_torch_load with weights_only and other kwargs"""
-        with patch(
+        mock_original = mocker.patch(
             "src.recbole_experiment.utils.torch_compat.original_torch_load"
-        ) as mock_original:
-            mock_original.return_value = "mock_result"
+        )
+        mock_original.return_value = "mock_result"
 
-            result = patched_torch_load(
-                "model.pth", weights_only=True, map_location="cuda:0"
-            )
+        result = patched_torch_load(
+            "model.pth", weights_only=True, map_location="cuda:0"
+        )
 
-            mock_original.assert_called_once_with(
-                "model.pth", weights_only=True, map_location="cuda:0"
-            )
-            assert result == "mock_result"
+        mock_original.assert_called_once_with(
+            "model.pth", weights_only=True, map_location="cuda:0"
+        )
+        assert result == "mock_result"
 
-    def test_patched_torch_load_positional_args(self):
+    def test_patched_torch_load_positional_args(self, mocker):
         """Test patched_torch_load with positional arguments"""
-        with patch(
+        mock_original = mocker.patch(
             "src.recbole_experiment.utils.torch_compat.original_torch_load"
-        ) as mock_original:
-            mock_original.return_value = "mock_result"
+        )
+        mock_original.return_value = "mock_result"
 
-            result = patched_torch_load("model.pth", "cpu")
+        result = patched_torch_load("model.pth", "cpu")
 
-            mock_original.assert_called_once_with(
-                "model.pth", "cpu", weights_only=False
-            )
-            assert result == "mock_result"
+        mock_original.assert_called_once_with(
+            "model.pth", "cpu", weights_only=False
+        )
+        assert result == "mock_result"

@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pandas as pd
 
@@ -51,201 +51,184 @@ class TestClickPredictionExperiment:
         assert hasattr(self.experiment, "trainer")
         assert self.experiment._data_prepared is False
 
-    @patch("builtins.print")
-    def test_ensure_data_prepared_first_call(self, mock_print):
+    def test_ensure_data_prepared_first_call(self, mocker):
         """Test _ensure_data_prepared on first call"""
-        with patch.object(
-            self.experiment.dataset, "save_to_recbole_format"
-        ) as mock_save:
-            self.experiment._ensure_data_prepared()
+        mock_print = mocker.patch("builtins.print")
+        mock_save = mocker.patch.object(self.experiment.dataset, "save_to_recbole_format")
+        
+        self.experiment._ensure_data_prepared()
 
-            mock_save.assert_called_once()
-            mock_print.assert_called_with("=== データ準備 ===")
-            assert self.experiment._data_prepared is True
+        mock_save.assert_called_once()
+        mock_print.assert_called_with("=== データ準備 ===")
+        assert self.experiment._data_prepared is True
 
-    @patch("builtins.print")
-    def test_ensure_data_prepared_subsequent_call(self, mock_print):
+    def test_ensure_data_prepared_subsequent_call(self, mocker):
         """Test _ensure_data_prepared on subsequent calls"""
-        with patch.object(
-            self.experiment.dataset, "save_to_recbole_format"
-        ) as mock_save:
-            # First call
-            self.experiment._ensure_data_prepared()
-            # Second call
-            self.experiment._ensure_data_prepared()
+        mocker.patch("builtins.print")
+        mock_save = mocker.patch.object(self.experiment.dataset, "save_to_recbole_format")
+        
+        # First call
+        self.experiment._ensure_data_prepared()
+        # Second call
+        self.experiment._ensure_data_prepared()
 
-            # Should only save once
-            mock_save.assert_called_once()
-            assert self.experiment._data_prepared is True
+        # Should only save once
+        mock_save.assert_called_once()
+        assert self.experiment._data_prepared is True
 
-    @patch.object(ClickPredictionExperiment, "_ensure_data_prepared")
-    def test_run_single_model_experiment(self, mock_ensure_data):
+    def test_run_single_model_experiment(self, mocker):
         """Test run_single_model_experiment"""
-        with patch.object(self.experiment.trainer, "train_single_model") as mock_train:
-            mock_train.return_value = {"test_result": {"auc": 0.85}}
+        mock_ensure_data = mocker.patch.object(self.experiment, "_ensure_data_prepared")
+        mock_train = mocker.patch.object(self.experiment.trainer, "train_single_model")
+        
+        mock_train.return_value = {"test_result": {"auc": 0.85}}
 
-            result = self.experiment.run_single_model_experiment(
-                "DeepFM", ["AUC"], "labeled"
-            )
+        result = self.experiment.run_single_model_experiment(
+            "DeepFM", ["AUC"], "labeled"
+        )
 
-            mock_ensure_data.assert_called_once()
-            mock_train.assert_called_once_with("DeepFM", ["AUC"], "labeled")
-            assert result == {"test_result": {"auc": 0.85}}
+        mock_ensure_data.assert_called_once()
+        mock_train.assert_called_once_with("DeepFM", ["AUC"], "labeled")
+        assert result == {"test_result": {"auc": 0.85}}
 
-    @patch.object(ClickPredictionExperiment, "_ensure_data_prepared")
-    @patch("src.recbole_experiment.models.registry.ModelRegistry.get_quick_models")
-    @patch("builtins.print")
-    def test_run_quick_comparison(self, mock_print, mock_get_quick, mock_ensure_data):
+    def test_run_quick_comparison(self, mocker):
         """Test run_quick_comparison"""
+        mock_ensure_data = mocker.patch.object(self.experiment, "_ensure_data_prepared")
+        mock_get_quick = mocker.patch("src.recbole_experiment.models.registry.ModelRegistry.get_quick_models")
+        mocker.patch("builtins.print")
+        mock_compare = mocker.patch.object(self.experiment.trainer, "compare_models")
+        
         mock_get_quick.return_value = ["LR", "FM", "DeepFM"]
+        mock_compare.return_value = {"LR": {"test_result": {"auc": 0.80}}}
 
-        with patch.object(self.experiment.trainer, "compare_models") as mock_compare:
-            mock_compare.return_value = {"LR": {"test_result": {"auc": 0.80}}}
+        self.experiment.run_quick_comparison(["AUC"], "labeled")
 
-            self.experiment.run_quick_comparison(["AUC"], "labeled")
+        mock_ensure_data.assert_called_once()
+        mock_get_quick.assert_called_once()
+        mock_compare.assert_called_once_with(
+            ["LR", "FM", "DeepFM"],
+            mode="quick",
+            metrics=["AUC"],
+            eval_mode="labeled",
+        )
 
-            mock_ensure_data.assert_called_once()
-            mock_get_quick.assert_called_once()
-            mock_compare.assert_called_once_with(
-                ["LR", "FM", "DeepFM"],
-                mode="quick",
-                metrics=["AUC"],
-                eval_mode="labeled",
-            )
-
-    @patch.object(ClickPredictionExperiment, "_ensure_data_prepared")
-    @patch("src.recbole_experiment.models.registry.ModelRegistry.get_all_models")
-    @patch("builtins.print")
-    def test_run_comprehensive_comparison(
-        self, mock_print, mock_get_all, mock_ensure_data
-    ):
+    def test_run_comprehensive_comparison(self, mocker):
         """Test run_comprehensive_comparison"""
+        mock_ensure_data = mocker.patch.object(self.experiment, "_ensure_data_prepared")
+        mock_get_all = mocker.patch("src.recbole_experiment.models.registry.ModelRegistry.get_all_models")
+        mocker.patch("builtins.print")
+        mock_compare = mocker.patch.object(self.experiment.trainer, "compare_models")
+        
         mock_get_all.return_value = ["LR", "FM", "DeepFM", "Pop", "BPR"]
+        mock_compare.return_value = {"LR": {"test_result": {"auc": 0.80}}}
 
-        with patch.object(self.experiment.trainer, "compare_models") as mock_compare:
-            mock_compare.return_value = {"LR": {"test_result": {"auc": 0.80}}}
+        self.experiment.run_comprehensive_comparison(["AUC"], "full")
 
-            self.experiment.run_comprehensive_comparison(["AUC"], "full")
+        mock_ensure_data.assert_called_once()
+        mock_get_all.assert_called_once()
+        mock_compare.assert_called_once_with(
+            ["LR", "FM", "DeepFM", "Pop", "BPR"],
+            mode="full",
+            metrics=["AUC"],
+            eval_mode="full",
+        )
 
-            mock_ensure_data.assert_called_once()
-            mock_get_all.assert_called_once()
-            mock_compare.assert_called_once_with(
-                ["LR", "FM", "DeepFM", "Pop", "BPR"],
-                mode="full",
-                metrics=["AUC"],
-                eval_mode="full",
-            )
-
-    @patch.object(ClickPredictionExperiment, "_ensure_data_prepared")
-    @patch("src.recbole_experiment.models.registry.ModelRegistry.get_quick_models")
-    @patch("src.recbole_experiment.training.metrics.MetricsManager.get_value_metrics")
-    @patch("builtins.print")
-    def test_run_value_metrics_comparison(
-        self, mock_print, mock_get_value, mock_get_quick, mock_ensure_data
-    ):
+    def test_run_value_metrics_comparison(self, mocker):
         """Test run_value_metrics_comparison"""
+        mock_ensure_data = mocker.patch.object(self.experiment, "_ensure_data_prepared")
+        mock_get_quick = mocker.patch("src.recbole_experiment.models.registry.ModelRegistry.get_quick_models")
+        mock_get_value = mocker.patch("src.recbole_experiment.training.metrics.MetricsManager.get_value_metrics")
+        mocker.patch("builtins.print")
+        mock_compare = mocker.patch.object(self.experiment.trainer, "compare_models")
+        
         mock_get_quick.return_value = ["LR", "FM", "DeepFM"]
         mock_get_value.return_value = ["AUC", "LogLoss", "MAE", "RMSE"]
+        mock_compare.return_value = {"LR": {"test_result": {"auc": 0.80}}}
 
-        with patch.object(self.experiment.trainer, "compare_models") as mock_compare:
-            mock_compare.return_value = {"LR": {"test_result": {"auc": 0.80}}}
+        self.experiment.run_value_metrics_comparison()
 
-            self.experiment.run_value_metrics_comparison()
+        mock_ensure_data.assert_called_once()
+        mock_get_quick.assert_called_once()
+        mock_get_value.assert_called_once()
+        mock_compare.assert_called_once_with(
+            ["LR", "FM", "DeepFM"],
+            mode="quick",
+            metrics=["AUC", "LogLoss", "MAE", "RMSE"],
+            eval_mode="labeled",
+        )
 
-            mock_ensure_data.assert_called_once()
-            mock_get_quick.assert_called_once()
-            mock_get_value.assert_called_once()
-            mock_compare.assert_called_once_with(
-                ["LR", "FM", "DeepFM"],
-                mode="quick",
-                metrics=["AUC", "LogLoss", "MAE", "RMSE"],
-                eval_mode="labeled",
-            )
-
-    @patch.object(ClickPredictionExperiment, "_ensure_data_prepared")
-    @patch("src.recbole_experiment.training.metrics.MetricsManager.get_ranking_metrics")
-    @patch("builtins.print")
-    def test_run_ranking_metrics_comparison(
-        self, mock_print, mock_get_ranking, mock_ensure_data
-    ):
+    def test_run_ranking_metrics_comparison(self, mocker):
         """Test run_ranking_metrics_comparison"""
+        mock_ensure_data = mocker.patch.object(self.experiment, "_ensure_data_prepared")
+        mock_get_ranking = mocker.patch("src.recbole_experiment.training.metrics.MetricsManager.get_ranking_metrics")
+        mocker.patch("builtins.print")
+        mock_compare = mocker.patch.object(self.experiment.trainer, "compare_models")
+        
         mock_get_ranking.return_value = ["Recall", "MRR", "NDCG", "Hit", "Precision"]
+        mock_compare.return_value = {"Pop": {"test_result": {"recall@10": 0.25}}}
 
-        with patch.object(self.experiment.trainer, "compare_models") as mock_compare:
-            mock_compare.return_value = {"Pop": {"test_result": {"recall@10": 0.25}}}
+        self.experiment.run_ranking_metrics_comparison()
 
-            self.experiment.run_ranking_metrics_comparison()
+        mock_ensure_data.assert_called_once()
+        mock_get_ranking.assert_called_once()
+        mock_compare.assert_called_once_with(
+            ["Pop", "BPR", "NeuMF"],  # hardcoded compatible models
+            mode="quick",
+            metrics=["Recall", "MRR", "NDCG", "Hit", "Precision"],
+            eval_mode="full",
+        )
 
-            mock_ensure_data.assert_called_once()
-            mock_get_ranking.assert_called_once()
-            mock_compare.assert_called_once_with(
-                ["Pop", "BPR", "NeuMF"],  # hardcoded compatible models
-                mode="quick",
-                metrics=["Recall", "MRR", "NDCG", "Hit", "Precision"],
-                eval_mode="full",
-            )
-
-    @patch.object(ClickPredictionExperiment, "_ensure_data_prepared")
-    @patch("src.recbole_experiment.models.registry.ModelRegistry.get_quick_models")
-    @patch("src.recbole_experiment.training.metrics.MetricsManager.get_value_metrics")
-    @patch("builtins.print")
-    def test_run_custom_metrics_comparison_defaults(
-        self, mock_print, mock_get_value, mock_get_quick, mock_ensure_data
-    ):
+    def test_run_custom_metrics_comparison_defaults(self, mocker):
         """Test run_custom_metrics_comparison with default parameters"""
+        mock_ensure_data = mocker.patch.object(self.experiment, "_ensure_data_prepared")
+        mock_get_quick = mocker.patch("src.recbole_experiment.models.registry.ModelRegistry.get_quick_models")
+        mock_get_value = mocker.patch("src.recbole_experiment.training.metrics.MetricsManager.get_value_metrics")
+        mocker.patch("builtins.print")
+        mock_compare = mocker.patch.object(self.experiment.trainer, "compare_models")
+        
         mock_get_quick.return_value = ["LR", "FM", "DeepFM"]
         mock_get_value.return_value = ["AUC", "LogLoss", "MAE", "RMSE"]
+        mock_compare.return_value = {"LR": {"test_result": {"auc": 0.80}}}
 
-        with patch.object(self.experiment.trainer, "compare_models") as mock_compare:
-            mock_compare.return_value = {"LR": {"test_result": {"auc": 0.80}}}
+        self.experiment.run_custom_metrics_comparison()
 
-            self.experiment.run_custom_metrics_comparison()
+        mock_ensure_data.assert_called_once()
+        mock_get_quick.assert_called_once()
+        mock_get_value.assert_called_once()
+        mock_compare.assert_called_once_with(
+            ["LR", "FM", "DeepFM"],
+            mode="quick",
+            metrics=["AUC", "LogLoss", "MAE", "RMSE"],
+            eval_mode="labeled",
+        )
 
-            mock_ensure_data.assert_called_once()
-            mock_get_quick.assert_called_once()
-            mock_get_value.assert_called_once()
-            mock_compare.assert_called_once_with(
-                ["LR", "FM", "DeepFM"],
-                mode="quick",
-                metrics=["AUC", "LogLoss", "MAE", "RMSE"],
-                eval_mode="labeled",
-            )
-
-    @patch.object(ClickPredictionExperiment, "_ensure_data_prepared")
-    @patch("builtins.print")
-    def test_run_custom_metrics_comparison_custom_params(
-        self, mock_print, mock_ensure_data
-    ):
+    def test_run_custom_metrics_comparison_custom_params(self, mocker):
         """Test run_custom_metrics_comparison with custom parameters"""
-        with patch.object(self.experiment.trainer, "compare_models") as mock_compare:
-            mock_compare.return_value = {"DeepFM": {"test_result": {"auc": 0.85}}}
+        mock_ensure_data = mocker.patch.object(self.experiment, "_ensure_data_prepared")
+        mocker.patch("builtins.print")
+        mock_compare = mocker.patch.object(self.experiment.trainer, "compare_models")
+        
+        mock_compare.return_value = {"DeepFM": {"test_result": {"auc": 0.85}}}
 
-            self.experiment.run_custom_metrics_comparison(
-                models=["DeepFM", "LR"], metrics=["AUC"], eval_mode="full"
-            )
+        self.experiment.run_custom_metrics_comparison(
+            models=["DeepFM", "LR"], metrics=["AUC"], eval_mode="full"
+        )
 
-            mock_ensure_data.assert_called_once()
-            mock_compare.assert_called_once_with(
-                ["DeepFM", "LR"], mode="quick", metrics=["AUC"], eval_mode="full"
-            )
+        mock_ensure_data.assert_called_once()
+        mock_compare.assert_called_once_with(
+            ["DeepFM", "LR"], mode="quick", metrics=["AUC"], eval_mode="full"
+        )
 
-    @patch("src.recbole_experiment.experiments.click_prediction.Config")
-    @patch("src.recbole_experiment.experiments.click_prediction.init_seed")
-    @patch("src.recbole_experiment.experiments.click_prediction.create_dataset")
-    @patch("src.recbole_experiment.experiments.click_prediction.data_preparation")
-    @patch("src.recbole_experiment.experiments.click_prediction.DeepFM")
-    @patch("builtins.print")
-    def test_predict_click_probability(
-        self,
-        mock_print,
-        mock_deepfm,
-        mock_data_prep,
-        mock_create_dataset,
-        mock_init_seed,
-        mock_config,
-    ):
+    def test_predict_click_probability(self, mocker):
         """Test predict_click_probability"""
         # Setup mocks
+        mock_config = mocker.patch("src.recbole_experiment.experiments.click_prediction.Config")
+        mock_init_seed = mocker.patch("src.recbole_experiment.experiments.click_prediction.init_seed")
+        mock_create_dataset = mocker.patch("src.recbole_experiment.experiments.click_prediction.create_dataset")
+        mock_data_prep = mocker.patch("src.recbole_experiment.experiments.click_prediction.data_preparation")
+        mock_deepfm = mocker.patch("src.recbole_experiment.experiments.click_prediction.DeepFM")
+        mocker.patch("builtins.print")
+        
         mock_config_instance = MagicMock()
         mock_config_instance.__getitem__.side_effect = lambda key: {
             "seed": 2023,
@@ -292,18 +275,19 @@ class TestClickPredictionExperiment:
         assert isinstance(self.experiment.trainer, ModelTrainer)
         assert self.experiment.trainer.config_manager is self.experiment.config_manager
 
-    @patch.object(ClickPredictionExperiment, "_ensure_data_prepared")
-    def test_multiple_experiment_calls_data_prepared_once(self, mock_ensure_data):
+    def test_multiple_experiment_calls_data_prepared_once(self, mocker):
         """Test that multiple experiment calls only prepare data once"""
-        with patch.object(self.experiment.trainer, "train_single_model") as mock_train:
-            mock_train.return_value = {"test_result": {"auc": 0.85}}
+        mock_ensure_data = mocker.patch.object(self.experiment, "_ensure_data_prepared")
+        mock_train = mocker.patch.object(self.experiment.trainer, "train_single_model")
+        
+        mock_train.return_value = {"test_result": {"auc": 0.85}}
 
-            # Run multiple experiments
-            self.experiment.run_single_model_experiment("DeepFM")
-            self.experiment.run_single_model_experiment("LR")
+        # Run multiple experiments
+        self.experiment.run_single_model_experiment("DeepFM")
+        self.experiment.run_single_model_experiment("LR")
 
-            # Data preparation should be called for each experiment method call
-            assert mock_ensure_data.call_count == 2
+        # Data preparation should be called for each experiment method call
+        assert mock_ensure_data.call_count == 2
 
     def test_experiment_with_different_datasets(self):
         """Test creating experiments with different datasets"""
@@ -329,15 +313,16 @@ class TestClickPredictionExperiment:
         assert hasattr(different_experiment, "config_manager")
         assert hasattr(different_experiment, "trainer")
 
-    @patch("builtins.print")
-    def test_data_prepared_flag_management(self, mock_print):
+    def test_data_prepared_flag_management(self, mocker):
         """Test _data_prepared flag management"""
+        mocker.patch("builtins.print")
+        mocker.patch.object(self.experiment.dataset, "save_to_recbole_format")
+        
         assert self.experiment._data_prepared is False
 
-        with patch.object(self.experiment.dataset, "save_to_recbole_format"):
-            self.experiment._ensure_data_prepared()
-            assert self.experiment._data_prepared is True
+        self.experiment._ensure_data_prepared()
+        assert self.experiment._data_prepared is True
 
-            # Flag should remain True after subsequent calls
-            self.experiment._ensure_data_prepared()
-            assert self.experiment._data_prepared is True
+        # Flag should remain True after subsequent calls
+        self.experiment._ensure_data_prepared()
+        assert self.experiment._data_prepared is True

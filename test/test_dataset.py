@@ -1,5 +1,4 @@
 import tempfile
-from unittest.mock import patch
 
 import pandas as pd
 
@@ -60,35 +59,35 @@ class TestDataset:
         assert dataset.items_df is items_df
         assert dataset.interactions_df is interactions_df
 
-    def test_save_to_recbole_format_default_path(self):
+    def test_save_to_recbole_format_default_path(self, mocker):
         """Test saving to RecBole format with default path"""
-        with patch(
+        mock_prepare = mocker.patch(
             "src.recbole_experiment.data.generator.DataGenerator.prepare_recbole_data"
-        ) as mock_prepare:
-            self.dataset.save_to_recbole_format()
+        )
+        self.dataset.save_to_recbole_format()
 
-            mock_prepare.assert_called_once_with(
-                self.sample_users,
-                self.sample_items,
-                self.sample_interactions,
-                "dataset/click_prediction/",
-            )
+        mock_prepare.assert_called_once_with(
+            self.sample_users,
+            self.sample_items,
+            self.sample_interactions,
+            "dataset/click_prediction/",
+        )
 
-    def test_save_to_recbole_format_custom_path(self):
+    def test_save_to_recbole_format_custom_path(self, mocker):
         """Test saving to RecBole format with custom path"""
         custom_path = "custom/path/"
 
-        with patch(
+        mock_prepare = mocker.patch(
             "src.recbole_experiment.data.generator.DataGenerator.prepare_recbole_data"
-        ) as mock_prepare:
-            self.dataset.save_to_recbole_format(custom_path)
+        )
+        self.dataset.save_to_recbole_format(custom_path)
 
-            mock_prepare.assert_called_once_with(
-                self.sample_users,
-                self.sample_items,
-                self.sample_interactions,
-                custom_path,
-            )
+        mock_prepare.assert_called_once_with(
+            self.sample_users,
+            self.sample_items,
+            self.sample_interactions,
+            custom_path,
+        )
 
     def test_save_to_recbole_format_integration(self):
         """Test actual saving to RecBole format (integration test)"""
@@ -135,7 +134,7 @@ class TestDataset:
         # to the original dataframe, not the new concatenated one
         assert len(self.dataset.users_df) == original_user_count
 
-    def test_dataset_with_empty_dataframes(self):
+    def test_dataset_with_empty_dataframes(self, mocker):
         """Test Dataset with empty dataframes"""
         empty_users = pd.DataFrame(
             columns=["user_id:token", "age:float", "gender:token"]
@@ -154,11 +153,11 @@ class TestDataset:
         assert len(dataset.interactions_df) == 0
 
         # Should still be able to save
-        with patch(
+        mock_prepare = mocker.patch(
             "src.recbole_experiment.data.generator.DataGenerator.prepare_recbole_data"
-        ) as mock_prepare:
-            dataset.save_to_recbole_format()
-            mock_prepare.assert_called_once()
+        )
+        dataset.save_to_recbole_format()
+        mock_prepare.assert_called_once()
 
     def test_dataset_with_large_dataframes(self):
         """Test Dataset with larger dataframes"""
