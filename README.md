@@ -40,7 +40,7 @@ The framework supports various types of recommendation models:
 
 1. Clone this repository:
    ```bash
-   git clone https://github.com/yourusername/rec-bole-experiment.git
+   git clone https://github.com/shibuiwilliam/rec_bole_experiment.git
    cd rec-bole-experiment
    ```
 
