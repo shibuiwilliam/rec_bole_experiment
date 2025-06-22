@@ -54,8 +54,10 @@ class TestClickPredictionExperiment:
     def test_ensure_data_prepared_first_call(self, mocker):
         """Test _ensure_data_prepared on first call"""
         mock_print = mocker.patch("builtins.print")
-        mock_save = mocker.patch.object(self.experiment.dataset, "save_to_recbole_format")
-        
+        mock_save = mocker.patch.object(
+            self.experiment.dataset, "save_to_recbole_format"
+        )
+
         self.experiment._ensure_data_prepared()
 
         mock_save.assert_called_once()
@@ -65,8 +67,10 @@ class TestClickPredictionExperiment:
     def test_ensure_data_prepared_subsequent_call(self, mocker):
         """Test _ensure_data_prepared on subsequent calls"""
         mocker.patch("builtins.print")
-        mock_save = mocker.patch.object(self.experiment.dataset, "save_to_recbole_format")
-        
+        mock_save = mocker.patch.object(
+            self.experiment.dataset, "save_to_recbole_format"
+        )
+
         # First call
         self.experiment._ensure_data_prepared()
         # Second call
@@ -80,7 +84,7 @@ class TestClickPredictionExperiment:
         """Test run_single_model_experiment"""
         mock_ensure_data = mocker.patch.object(self.experiment, "_ensure_data_prepared")
         mock_train = mocker.patch.object(self.experiment.trainer, "train_single_model")
-        
+
         mock_train.return_value = {"test_result": {"auc": 0.85}}
 
         result = self.experiment.run_single_model_experiment(
@@ -94,10 +98,12 @@ class TestClickPredictionExperiment:
     def test_run_quick_comparison(self, mocker):
         """Test run_quick_comparison"""
         mock_ensure_data = mocker.patch.object(self.experiment, "_ensure_data_prepared")
-        mock_get_quick = mocker.patch("src.recbole_experiment.models.registry.ModelRegistry.get_quick_models")
+        mock_get_quick = mocker.patch(
+            "src.recbole_experiment.models.registry.ModelRegistry.get_quick_models"
+        )
         mocker.patch("builtins.print")
         mock_compare = mocker.patch.object(self.experiment.trainer, "compare_models")
-        
+
         mock_get_quick.return_value = ["LR", "FM", "DeepFM"]
         mock_compare.return_value = {"LR": {"test_result": {"auc": 0.80}}}
 
@@ -115,10 +121,12 @@ class TestClickPredictionExperiment:
     def test_run_comprehensive_comparison(self, mocker):
         """Test run_comprehensive_comparison"""
         mock_ensure_data = mocker.patch.object(self.experiment, "_ensure_data_prepared")
-        mock_get_all = mocker.patch("src.recbole_experiment.models.registry.ModelRegistry.get_all_models")
+        mock_get_all = mocker.patch(
+            "src.recbole_experiment.models.registry.ModelRegistry.get_all_models"
+        )
         mocker.patch("builtins.print")
         mock_compare = mocker.patch.object(self.experiment.trainer, "compare_models")
-        
+
         mock_get_all.return_value = ["LR", "FM", "DeepFM", "Pop", "BPR"]
         mock_compare.return_value = {"LR": {"test_result": {"auc": 0.80}}}
 
@@ -136,19 +144,23 @@ class TestClickPredictionExperiment:
     def test_run_value_metrics_comparison(self, mocker):
         """Test run_value_metrics_comparison"""
         mock_ensure_data = mocker.patch.object(self.experiment, "_ensure_data_prepared")
-        mock_get_quick = mocker.patch("src.recbole_experiment.models.registry.ModelRegistry.get_quick_models")
-        mock_get_value = mocker.patch("src.recbole_experiment.training.metrics.MetricsManager.get_value_metrics")
+        mock_get_context = mocker.patch(
+            "src.recbole_experiment.models.registry.ModelRegistry.get_context_aware_models"
+        )
+        mock_get_value = mocker.patch(
+            "src.recbole_experiment.training.metrics.MetricsManager.get_value_metrics"
+        )
         mocker.patch("builtins.print")
         mock_compare = mocker.patch.object(self.experiment.trainer, "compare_models")
-        
-        mock_get_quick.return_value = ["LR", "FM", "DeepFM"]
+
+        mock_get_context.return_value = ["LR", "FM", "DeepFM"]
         mock_get_value.return_value = ["AUC", "LogLoss", "MAE", "RMSE"]
         mock_compare.return_value = {"LR": {"test_result": {"auc": 0.80}}}
 
         self.experiment.run_value_metrics_comparison()
 
         mock_ensure_data.assert_called_once()
-        mock_get_quick.assert_called_once()
+        mock_get_context.assert_called_once()
         mock_get_value.assert_called_once()
         mock_compare.assert_called_once_with(
             ["LR", "FM", "DeepFM"],
@@ -160,19 +172,26 @@ class TestClickPredictionExperiment:
     def test_run_ranking_metrics_comparison(self, mocker):
         """Test run_ranking_metrics_comparison"""
         mock_ensure_data = mocker.patch.object(self.experiment, "_ensure_data_prepared")
-        mock_get_ranking = mocker.patch("src.recbole_experiment.training.metrics.MetricsManager.get_ranking_metrics")
+        mock_get_compatible = mocker.patch(
+            "src.recbole_experiment.models.registry.ModelRegistry.get_compatible_ranking_models"
+        )
+        mock_get_ranking = mocker.patch(
+            "src.recbole_experiment.training.metrics.MetricsManager.get_ranking_metrics"
+        )
         mocker.patch("builtins.print")
         mock_compare = mocker.patch.object(self.experiment.trainer, "compare_models")
-        
+
+        mock_get_compatible.return_value = ["Pop", "BPR", "NeuMF", "DGCF"]
         mock_get_ranking.return_value = ["Recall", "MRR", "NDCG", "Hit", "Precision"]
         mock_compare.return_value = {"Pop": {"test_result": {"recall@10": 0.25}}}
 
         self.experiment.run_ranking_metrics_comparison()
 
         mock_ensure_data.assert_called_once()
+        mock_get_compatible.assert_called_once()
         mock_get_ranking.assert_called_once()
         mock_compare.assert_called_once_with(
-            ["Pop", "BPR", "NeuMF"],  # hardcoded compatible models
+            ["Pop", "BPR", "NeuMF", "DGCF"],
             mode="quick",
             metrics=["Recall", "MRR", "NDCG", "Hit", "Precision"],
             eval_mode="full",
@@ -181,11 +200,15 @@ class TestClickPredictionExperiment:
     def test_run_custom_metrics_comparison_defaults(self, mocker):
         """Test run_custom_metrics_comparison with default parameters"""
         mock_ensure_data = mocker.patch.object(self.experiment, "_ensure_data_prepared")
-        mock_get_quick = mocker.patch("src.recbole_experiment.models.registry.ModelRegistry.get_quick_models")
-        mock_get_value = mocker.patch("src.recbole_experiment.training.metrics.MetricsManager.get_value_metrics")
+        mock_get_quick = mocker.patch(
+            "src.recbole_experiment.models.registry.ModelRegistry.get_quick_models"
+        )
+        mock_get_value = mocker.patch(
+            "src.recbole_experiment.training.metrics.MetricsManager.get_value_metrics"
+        )
         mocker.patch("builtins.print")
         mock_compare = mocker.patch.object(self.experiment.trainer, "compare_models")
-        
+
         mock_get_quick.return_value = ["LR", "FM", "DeepFM"]
         mock_get_value.return_value = ["AUC", "LogLoss", "MAE", "RMSE"]
         mock_compare.return_value = {"LR": {"test_result": {"auc": 0.80}}}
@@ -207,7 +230,7 @@ class TestClickPredictionExperiment:
         mock_ensure_data = mocker.patch.object(self.experiment, "_ensure_data_prepared")
         mocker.patch("builtins.print")
         mock_compare = mocker.patch.object(self.experiment.trainer, "compare_models")
-        
+
         mock_compare.return_value = {"DeepFM": {"test_result": {"auc": 0.85}}}
 
         self.experiment.run_custom_metrics_comparison(
@@ -222,13 +245,23 @@ class TestClickPredictionExperiment:
     def test_predict_click_probability(self, mocker):
         """Test predict_click_probability"""
         # Setup mocks
-        mock_config = mocker.patch("src.recbole_experiment.experiments.click_prediction.Config")
-        mock_init_seed = mocker.patch("src.recbole_experiment.experiments.click_prediction.init_seed")
-        mock_create_dataset = mocker.patch("src.recbole_experiment.experiments.click_prediction.create_dataset")
-        mock_data_prep = mocker.patch("src.recbole_experiment.experiments.click_prediction.data_preparation")
-        mock_deepfm = mocker.patch("src.recbole_experiment.experiments.click_prediction.DeepFM")
+        mock_config = mocker.patch(
+            "src.recbole_experiment.experiments.click_prediction.Config"
+        )
+        mock_init_seed = mocker.patch(
+            "src.recbole_experiment.experiments.click_prediction.init_seed"
+        )
+        mock_create_dataset = mocker.patch(
+            "src.recbole_experiment.experiments.click_prediction.create_dataset"
+        )
+        mock_data_prep = mocker.patch(
+            "src.recbole_experiment.experiments.click_prediction.data_preparation"
+        )
+        mock_deepfm = mocker.patch(
+            "src.recbole_experiment.experiments.click_prediction.DeepFM"
+        )
         mocker.patch("builtins.print")
-        
+
         mock_config_instance = MagicMock()
         mock_config_instance.__getitem__.side_effect = lambda key: {
             "seed": 2023,
@@ -279,7 +312,7 @@ class TestClickPredictionExperiment:
         """Test that multiple experiment calls only prepare data once"""
         mock_ensure_data = mocker.patch.object(self.experiment, "_ensure_data_prepared")
         mock_train = mocker.patch.object(self.experiment.trainer, "train_single_model")
-        
+
         mock_train.return_value = {"test_result": {"auc": 0.85}}
 
         # Run multiple experiments
@@ -317,7 +350,7 @@ class TestClickPredictionExperiment:
         """Test _data_prepared flag management"""
         mocker.patch("builtins.print")
         mocker.patch.object(self.experiment.dataset, "save_to_recbole_format")
-        
+
         assert self.experiment._data_prepared is False
 
         self.experiment._ensure_data_prepared()

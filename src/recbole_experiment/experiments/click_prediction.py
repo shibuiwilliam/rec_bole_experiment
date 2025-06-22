@@ -66,7 +66,7 @@ class ClickPredictionExperiment:
         """Value指標での比較"""
         print("=== Value指標での比較 ===")
         self._ensure_data_prepared()
-        models = ModelRegistry.get_quick_models()
+        models = ModelRegistry.get_context_aware_models()
         metrics = MetricsManager.get_value_metrics()
         return self.trainer.compare_models(
             models, mode="quick", metrics=metrics, eval_mode="labeled"
@@ -76,8 +76,8 @@ class ClickPredictionExperiment:
         """Ranking指標での比較"""
         print("=== Ranking指標での比較 ===")
         self._ensure_data_prepared()
-        # より互換性の高いモデルを選択
-        models = ["Pop", "BPR", "NeuMF"]  # 確実に動作するモデル
+        # ランキング指標と互換性のあるモデルを選択
+        models = ModelRegistry.get_compatible_ranking_models()
         metrics = MetricsManager.get_ranking_metrics()
         return self.trainer.compare_models(
             models, mode="quick", metrics=metrics, eval_mode="full"

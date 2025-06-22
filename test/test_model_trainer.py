@@ -1,4 +1,3 @@
-
 from src.recbole_experiment.config.manager import ConfigManager
 from src.recbole_experiment.training.trainer import ModelTrainer
 
@@ -21,9 +20,11 @@ class TestModelTrainer:
         mock_determine_metrics = mocker.patch(
             "src.recbole_experiment.training.metrics.MetricsManager.determine_metrics_for_model"
         )
-        mock_run_recbole = mocker.patch("src.recbole_experiment.training.trainer.run_recbole")
+        mock_run_recbole = mocker.patch(
+            "src.recbole_experiment.training.trainer.run_recbole"
+        )
         mocker.patch("builtins.print")
-        
+
         mock_determine_metrics.return_value = ["AUC", "LogLoss"]
         mock_result = {"test_result": {"auc": 0.85, "logloss": 0.45}}
         mock_run_recbole.return_value = mock_result
@@ -39,9 +40,11 @@ class TestModelTrainer:
     def test_train_single_model_custom_metrics(self, mocker):
         """Test single model training with custom metrics"""
         # Setup mocks
-        mock_run_recbole = mocker.patch("src.recbole_experiment.training.trainer.run_recbole")
+        mock_run_recbole = mocker.patch(
+            "src.recbole_experiment.training.trainer.run_recbole"
+        )
         mocker.patch("builtins.print")
-        
+
         mock_result = {"test_result": {"auc": 0.85}}
         mock_run_recbole.return_value = mock_result
         custom_metrics = ["AUC"]
@@ -59,9 +62,11 @@ class TestModelTrainer:
     def test_compare_models_success(self, mocker):
         """Test successful model comparison"""
         # Setup mocks
-        mock_run_recbole = mocker.patch("src.recbole_experiment.training.trainer.run_recbole")
+        mock_run_recbole = mocker.patch(
+            "src.recbole_experiment.training.trainer.run_recbole"
+        )
         mocker.patch("builtins.print")
-        
+
         mock_results = {
             "call_1": {"test_result": {"auc": 0.85, "logloss": 0.45}},
             "call_2": {"test_result": {"auc": 0.80, "logloss": 0.50}},
@@ -81,9 +86,11 @@ class TestModelTrainer:
     def test_compare_models_with_error(self, mocker):
         """Test model comparison with one model failing"""
         # Setup mocks - first call succeeds, second fails
-        mock_run_recbole = mocker.patch("src.recbole_experiment.training.trainer.run_recbole")
+        mock_run_recbole = mocker.patch(
+            "src.recbole_experiment.training.trainer.run_recbole"
+        )
         mocker.patch("builtins.print")
-        
+
         mock_run_recbole.side_effect = [
             {"test_result": {"auc": 0.85}},
             Exception("Model failed"),
@@ -104,9 +111,11 @@ class TestModelTrainer:
         mock_determine_metrics = mocker.patch(
             "src.recbole_experiment.training.metrics.MetricsManager.determine_metrics_for_model"
         )
-        mock_run_recbole = mocker.patch("src.recbole_experiment.training.trainer.run_recbole")
+        mock_run_recbole = mocker.patch(
+            "src.recbole_experiment.training.trainer.run_recbole"
+        )
         mocker.patch("builtins.print")
-        
+
         mock_determine_metrics.side_effect = [["AUC"], ["Recall"]]
         mock_run_recbole.side_effect = [
             {"test_result": {"auc": 0.85}},
@@ -124,9 +133,11 @@ class TestModelTrainer:
     def test_compare_models_quick_mode(self, mocker):
         """Test model comparison in quick mode"""
         # Setup mocks
-        mock_run_recbole = mocker.patch("src.recbole_experiment.training.trainer.run_recbole")
+        mock_run_recbole = mocker.patch(
+            "src.recbole_experiment.training.trainer.run_recbole"
+        )
         mocker.patch("builtins.print")
-        
+
         mock_run_recbole.return_value = {"test_result": {"auc": 0.85}}
 
         # Execute
@@ -146,7 +157,7 @@ class TestModelTrainer:
     def test_display_results_with_custom_metrics(self, mocker):
         """Test display results with custom metrics"""
         mock_print = mocker.patch("builtins.print")
-        
+
         results = {
             "DeepFM": {"test_result": {"auc": 0.85, "logloss": 0.45}},
             "LR": {"test_result": {"auc": 0.80, "logloss": 0.50}},
@@ -161,7 +172,7 @@ class TestModelTrainer:
     def test_display_results_auto_metrics(self, mocker):
         """Test display results with automatic metric detection"""
         mock_print = mocker.patch("builtins.print")
-        
+
         results = {
             "DeepFM": {"test_result": {"auc": 0.85, "recall@10": 0.25}},
             "Pop": {"test_result": {"auc": 0.70, "recall@10": 0.20}},
@@ -175,7 +186,7 @@ class TestModelTrainer:
     def test_display_results_ranking_metrics(self, mocker):
         """Test display results with ranking metrics"""
         mock_print = mocker.patch("builtins.print")
-        
+
         results = {
             "Pop": {"test_result": {"recall@10": 0.25, "ndcg@10": 0.15}},
             "BPR": {"test_result": {"recall@10": 0.30, "ndcg@10": 0.18}},
@@ -192,7 +203,7 @@ class TestModelTrainer:
             "src.recbole_experiment.models.registry.ModelRegistry.get_model_descriptions"
         )
         mock_print = mocker.patch("builtins.print")
-        
+
         mock_get_descriptions.return_value = {
             "DeepFM": "Deep + FM model",
             "LR": "Logistic Regression",
@@ -211,7 +222,7 @@ class TestModelTrainer:
     def test_display_results_sorting(self, mocker):
         """Test that results are sorted correctly"""
         mock_print = mocker.patch("builtins.print")
-        
+
         results = {
             "ModelA": {"test_result": {"auc": 0.80}},
             "ModelB": {"test_result": {"auc": 0.90}},  # Higher AUC
@@ -226,9 +237,11 @@ class TestModelTrainer:
 
     def test_compare_models_preserves_config(self, mocker):
         """Test that base config is not modified during comparison"""
-        mock_run_recbole = mocker.patch("src.recbole_experiment.training.trainer.run_recbole")
+        mock_run_recbole = mocker.patch(
+            "src.recbole_experiment.training.trainer.run_recbole"
+        )
         mocker.patch("builtins.print")
-        
+
         mock_run_recbole.return_value = {"test_result": {"auc": 0.85}}
 
         # Get original config
@@ -244,9 +257,11 @@ class TestModelTrainer:
 
     def test_train_single_model_prints_metrics(self, mocker):
         """Test that single model training prints selected metrics"""
-        mock_run_recbole = mocker.patch("src.recbole_experiment.training.trainer.run_recbole")
+        mock_run_recbole = mocker.patch(
+            "src.recbole_experiment.training.trainer.run_recbole"
+        )
         mock_print = mocker.patch("builtins.print")
-        
+
         mock_run_recbole.return_value = {"test_result": {"auc": 0.85}}
 
         self.trainer.train_single_model("DeepFM", metrics=["AUC"])
@@ -258,9 +273,13 @@ class TestModelTrainer:
 
     def test_train_single_model_uses_model_config(self, mocker):
         """Test that single model training uses model-specific config"""
-        mock_get_config = mocker.patch("src.recbole_experiment.models.registry.ModelRegistry.get_model_config")
-        mock_run_recbole = mocker.patch("src.recbole_experiment.training.trainer.run_recbole")
-        
+        mock_get_config = mocker.patch(
+            "src.recbole_experiment.models.registry.ModelRegistry.get_model_config"
+        )
+        mock_run_recbole = mocker.patch(
+            "src.recbole_experiment.training.trainer.run_recbole"
+        )
+
         mock_get_config.return_value = {"model": "DeepFM", "custom_param": "value"}
         mock_run_recbole.return_value = {"test_result": {}}
 

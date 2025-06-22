@@ -1,4 +1,3 @@
-
 from src.recbole_experiment.utils.torch_compat import patched_torch_load
 
 
@@ -48,9 +47,7 @@ class TestTorchPatch:
         )
         mock_original.return_value = "mock_result"
 
-        result = patched_torch_load(
-            "model.pth", map_location="cpu", pickle_module=None
-        )
+        result = patched_torch_load("model.pth", map_location="cpu", pickle_module=None)
 
         mock_original.assert_called_once_with(
             "model.pth", map_location="cpu", pickle_module=None, weights_only=False
@@ -82,7 +79,5 @@ class TestTorchPatch:
 
         result = patched_torch_load("model.pth", "cpu")
 
-        mock_original.assert_called_once_with(
-            "model.pth", "cpu", weights_only=False
-        )
+        mock_original.assert_called_once_with("model.pth", "cpu", weights_only=False)
         assert result == "mock_result"

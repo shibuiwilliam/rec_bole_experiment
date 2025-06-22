@@ -70,6 +70,13 @@ class ModelRegistry:
         """系列推薦モデルのリストを取得"""
         return cls.SEQUENTIAL_MODELS
 
+    @classmethod
+    def get_compatible_ranking_models(cls) -> List[str]:
+        """ランキング指標と互換性のあるモデルのリストを取得"""
+        # ItemKNN, LightGCN, NGCF は現在の設定では問題があるため除外
+        # Sequential models はデータ形式の問題で除外
+        return ["Pop", "BPR", "NeuMF", "DGCF"]
+
     @staticmethod
     def get_model_config(
         model_name: str, base_config: Dict[str, Any]
