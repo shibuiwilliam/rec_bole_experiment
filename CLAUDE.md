@@ -19,28 +19,28 @@ make mypy          # Run type checking with mypy
 **Running the Experiment:**
 ```bash
 # Default: ranking metrics comparison
-python src/main.py
+python -m src.main
 
 # Single model experiment
-python src/main.py --job single_model --model DeepFM --eval-mode labeled
+python -m src.main single_model --model DeepFM --eval-mode labeled
 
 # Custom metrics comparison
-python src/main.py --job custom_metrics --models LR --models FM --models DeepFM --metrics AUC --metrics LogLoss --eval-mode labeled
+python -m src.main custom_metrics --models LR --models FM --models DeepFM --metrics AUC --metrics LogLoss --eval-mode labeled
 
 # Comprehensive comparison (all 32+ models)
-python src/main.py --job comprehensive_comparison --metrics AUC --metrics LogLoss --metrics MAE --eval-mode labeled
+python -m src.main comprehensive_comparison --metrics AUC --metrics LogLoss --metrics MAE --eval-mode labeled
 
 # Quick comparison of main models
-python src/main.py --job quick_comparison --eval-mode labeled
+python -m src.main quick_comparison --eval-mode labeled
 
 # Value metrics comparison (CTR prediction focus)
-python src/main.py --job value_metrics
+python -m src.main value_metrics
 
 # Ranking metrics comparison (recommendation focus)  
-python src/main.py --job ranking_metrics
+python -m src.main ranking_metrics
 
 # Click prediction example
-python src/main.py --job predict_click
+python -m src.main predict_click
 ```
 
 ## CLI Interface
@@ -64,7 +64,7 @@ python src/main.py --job predict_click
 ## Architecture
 
 **Core Components:**
-- `src/main.py`: Well-architected experiment framework with clean class separation and CLI interface
+- `-m src.main`: Well-architected experiment framework with clean class separation and CLI interface
 
 **Class Architecture:**
 - `DataGenerator`: Handles sample data creation and RecBole format conversion

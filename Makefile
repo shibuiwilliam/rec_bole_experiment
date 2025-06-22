@@ -19,3 +19,6 @@ lint_fmt: lint fmt
 mypy:
 	uvx mypy $(SRC) --namespace-packages --explicit-package-bases
 
+.PHONY: test
+test:
+	pytest -s -v test/
