@@ -8,8 +8,13 @@ This is a RecBole experiment project for recommendation systems, specifically fo
 
 ## Key Commands
 
-**Linting and Formatting:**
+**Testing and Code Quality:**
 ```bash
+# Testing
+python -m pytest test/ -v    # Run all tests with verbose output
+python -m pytest test/test_specific_file.py  # Run specific test file
+
+# Linting and Formatting
 make lint          # Run ruff linter with auto-fix
 make fmt           # Format code with ruff
 make lint_fmt      # Run both lint and format
@@ -63,17 +68,39 @@ python -m src.main predict_click
 
 ## Architecture
 
+**Project Structure:**
+```
+src/
+├── main.py                      # CLI entry point and job orchestration
+└── recbole_experiment/
+    ├── config/
+    │   └── manager.py          # ConfigManager: RecBole configuration management
+    ├── data/
+    │   ├── dataset.py          # Dataset: Data container class
+    │   └── generator.py        # DataGenerator: Sample data creation
+    ├── experiments/
+    │   └── click_prediction.py # ClickPredictionExperiment: Main experiment class
+    ├── models/
+    │   └── registry.py         # ModelRegistry: Model catalog and configurations
+    ├── training/
+    │   ├── metrics.py          # MetricsManager: Evaluation metrics management
+    │   └── trainer.py          # ModelTrainer: Training and comparison logic
+    └── utils/
+        └── torch_compat.py     # PyTorch compatibility utilities
+```
+
 **Core Components:**
-- `-m src.main`: Well-architected experiment framework with clean class separation and CLI interface
+- `src.main`: CLI entry point with well-architected job orchestration and clean class separation
 
 **Class Architecture:**
-- `DataGenerator`: Handles sample data creation and RecBole format conversion
-- `Dataset`: Data container class for pre-generated datasets
-- `MetricsManager`: Evaluation metrics management with ranking/value metric classification
-- `ConfigManager`: Centralized configuration management for RecBole settings
-- `ModelRegistry`: Model catalog with configurations and descriptions for 32+ models
-- `ModelTrainer`: Training, evaluation, and comparison logic with error handling
-- `ClickPredictionExperiment`: High-level experiment orchestration that accepts pre-generated datasets
+- `ConfigManager` (`config/manager.py`): Centralized configuration management for RecBole settings
+- `DataGenerator` (`data/generator.py`): Handles sample data creation and RecBole format conversion
+- `Dataset` (`data/dataset.py`): Data container class for pre-generated datasets
+- `ClickPredictionExperiment` (`experiments/click_prediction.py`): High-level experiment orchestration
+- `ModelRegistry` (`models/registry.py`): Model catalog with configurations and descriptions for 32+ models
+- `MetricsManager` (`training/metrics.py`): Evaluation metrics management with ranking/value metric classification
+- `ModelTrainer` (`training/trainer.py`): Training, evaluation, and comparison logic with error handling
+- `torch_compat` (`utils/torch_compat.py`): PyTorch 2.6+ compatibility patches
 
 **Data Pipeline:**
 The project follows RecBole's atomic file format for data:
@@ -119,6 +146,31 @@ The project follows RecBole's atomic file format for data:
 - Uses uv for dependency management
 - Key dependencies: recbole>=1.2.0, numpy<2, pandas>=2.3.0, click>=8.2.1
 - Dev tools: ruff, mypy, isort configured via pyproject.toml
+- Testing: pytest>=8.4.1 with pytest-mock>=3.14.1 for mocking
+
+## Testing Framework
+
+**Test Structure:**
+- All tests located in `test/` directory
+- Uses pytest framework with pytest-mock for mocking
+- 128+ comprehensive test cases covering all major components
+- Test files follow `test_*.py` naming convention
+
+**Test Coverage:**
+- `test_click_prediction_experiment.py`: Tests for `experiments/click_prediction.py`
+- `test_config_manager.py`: Tests for `config/manager.py`
+- `test_data_generator.py`: Tests for `data/generator.py`
+- `test_dataset.py`: Tests for `data/dataset.py`
+- `test_metrics_manager.py`: Tests for `training/metrics.py`
+- `test_model_registry.py`: Tests for `models/registry.py`
+- `test_model_trainer.py`: Tests for `training/trainer.py`
+- `test_torch_patch.py`: Tests for `utils/torch_compat.py`
+
+**Mocking Pattern:**
+- Uses pytest-mock's `mocker` fixture instead of unittest.mock
+- Example: `mock_obj = mocker.patch("module.function")`
+- All test methods requiring mocks accept `mocker` parameter
+- Follows pytest best practices for test isolation
 
 ## Data Format Requirements
 
@@ -137,3 +189,23 @@ When working with RecBole data, ensure feature names follow `feat_name:feat_type
 - Comprehensive error handling for model compatibility issues
 - Automatic metric selection prevents metric/model type mismatches
 - Robust data format adaptation for different evaluation scenarios
+
+## Development Guidelines
+
+**Code Quality:**
+- All code must pass linting (`make lint_fmt`) before committing
+- Type hints are required for public methods and classes
+- Follow existing code patterns and architectural decisions
+- Write tests for new functionality using pytest-mock patterns
+
+**Testing Requirements:**
+- New features must include corresponding test coverage
+- Use `mocker` fixture for all mocking needs (not unittest.mock)
+- Test method signatures: `def test_method(self, mocker):`
+- Maintain test isolation and avoid side effects between tests
+
+**When Contributing:**
+- Run full test suite before submitting changes: `python -m pytest test/ -v`
+- Ensure linting passes: `make lint_fmt`
+- Follow existing naming conventions and project structure
+- Update CLAUDE.md if adding new major features or architectural changes

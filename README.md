@@ -111,6 +111,9 @@ make mypy
 
 # Format and lint in one command
 make lint_fmt
+
+# Running tests
+make test
 ```
 
 ## Disclaimer
