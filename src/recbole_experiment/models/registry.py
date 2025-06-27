@@ -26,6 +26,7 @@ class ModelRegistry:
         "DIN",
         "DIEN",
         "DSSM",
+        "LightGBM",
     ]
 
     GENERAL_MODELS = ["Pop", "ItemKNN", "BPR", "NeuMF", "LightGCN", "NGCF", "DGCF"]
@@ -113,6 +114,13 @@ class ModelRegistry:
             "DIN": {"mlp_hidden_size": [128, 64], "attention_mlp_layers": [64, 32]},
             "DIEN": {"mlp_hidden_size": [128, 64], "gru_hidden_size": 64},
             "DSSM": {"mlp_hidden_size": [128, 64]},
+            "LightGBM": {
+                "convert_token_to_onehot": True,
+                "lgb_num_boost_round": 100,
+                "lgb_early_stopping_rounds": 10,
+                "lgb_silent": False,
+                "lgb_verbose_eval": 50,
+            },
             # General recommender models
             "Pop": {"epochs": 1},
             "ItemKNN": {"k": 50},
@@ -176,6 +184,7 @@ class ModelRegistry:
             "DIN": "Deep Interest Network (動的注意機構)",
             "DIEN": "Deep Interest Evolution Network (興味進化)",
             "DSSM": "Deep Structured Semantic Model (意味マッチング)",
+            "LightGBM": "Light Gradient Boosting Machine (勾配ブースティング)",
             # General recommender models
             "Pop": "Popularity (人気度ベースライン)",
             "ItemKNN": "Item-based KNN (アイテム協調フィルタリング)",

@@ -97,7 +97,7 @@ src/
 - `DataGenerator` (`data/generator.py`): Handles sample data creation and RecBole format conversion
 - `Dataset` (`data/dataset.py`): Data container class for pre-generated datasets
 - `ClickPredictionExperiment` (`experiments/click_prediction.py`): High-level experiment orchestration
-- `ModelRegistry` (`models/registry.py`): Model catalog with configurations and descriptions for 32+ models
+- `ModelRegistry` (`models/registry.py`): Model catalog with configurations and descriptions for 33+ models
 - `MetricsManager` (`training/metrics.py`): Evaluation metrics management with ranking/value metric classification
 - `ModelTrainer` (`training/trainer.py`): Training, evaluation, and comparison logic with error handling
 - `torch_compat` (`utils/torch_compat.py`): PyTorch 2.6+ compatibility patches
@@ -115,8 +115,8 @@ The project follows RecBole's atomic file format for data:
 - Pre-generated datasets can be reused across multiple experiments
 
 **RecBole Integration:**
-- Comprehensive recommendation model comparison framework with 32+ models across 3 major categories
-- **Context-aware models** (18): LR, FM, FFM, FNN, DeepFM, NFM, AFM, PNN, WideDeep, DCN, DCNV2, xDeepFM, AutoInt, FwFM, FiGNN, DIN, DIEN, DSSM
+- Comprehensive recommendation model comparison framework with 33+ models across 3 major categories
+- **Context-aware models** (19): LR, FM, FFM, FNN, DeepFM, NFM, AFM, PNN, WideDeep, DCN, DCNV2, xDeepFM, AutoInt, FwFM, FiGNN, DIN, DIEN, DSSM, LightGBM
 - **General recommender models** (7): Pop, ItemKNN, BPR, NeuMF, LightGCN, NGCF, DGCF
 - **Sequential recommender models** (5): GRU4Rec, SASRec, BERT4Rec, Caser, NARM
 - **Flexible metrics system**: Choose between Value metrics (AUC, LogLoss, MAE, RMSE) and Ranking metrics (Recall, MRR, NDCG, Hit, Precision)

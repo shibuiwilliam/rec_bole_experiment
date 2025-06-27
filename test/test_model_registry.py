@@ -27,9 +27,10 @@ class TestModelRegistry:
             "DIN",
             "DIEN",
             "DSSM",
+            "LightGBM",
         ]
         assert ModelRegistry.CONTEXT_AWARE_MODELS == expected_models
-        assert len(ModelRegistry.CONTEXT_AWARE_MODELS) == 18
+        assert len(ModelRegistry.CONTEXT_AWARE_MODELS) == 19
 
     def test_general_models_list(self):
         """Test general models list"""
@@ -62,7 +63,7 @@ class TestModelRegistry:
     def test_get_all_models(self):
         """Test get_all_models method"""
         all_models = ModelRegistry.get_all_models()
-        expected_total = 18 + 7 + 5  # 30 models total
+        expected_total = 19 + 7 + 5  # 31 models total
         assert len(all_models) == expected_total
 
         # Check that all category models are included
