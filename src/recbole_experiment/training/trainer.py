@@ -6,6 +6,7 @@ from recbole.quick_start import run_recbole
 
 from src.recbole_experiment.models.registry import ModelRegistry
 from src.recbole_experiment.training.metrics import MetricsManager
+from src.recbole_experiment.utils.model_saver import ModelSaver
 
 
 class ModelTrainer:
@@ -13,6 +14,7 @@ class ModelTrainer:
 
     def __init__(self, config_manager):
         self.config_manager = config_manager
+        self.model_saver = ModelSaver()
 
     def train_single_model(
         self,
@@ -35,6 +37,11 @@ class ModelTrainer:
         result = run_recbole(
             model=model_name, dataset="click_prediction", config_dict=config_dict
         )
+
+        # Save model to outputs directory
+        saved_path = self.model_saver.save_model(model_name)
+        if saved_path:
+            result["saved_model_path"] = saved_path
 
         print("=== 学習完了 ===")
         print(f"テスト結果: {result}")
@@ -79,6 +86,12 @@ class ModelTrainer:
                     dataset="click_prediction",
                     config_dict=config_dict,
                 )
+
+                # Save model to outputs directory
+                saved_path = self.model_saver.save_model(model_name)
+                if saved_path:
+                    result["saved_model_path"] = saved_path
+
                 results[model_name] = result
 
                 test_result = result.get("test_result", {})

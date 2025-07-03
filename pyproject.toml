@@ -17,6 +17,7 @@ dependencies = [
     "ray>=2.47.1",
     "recbole>=1.2.0",
     "scikit-learn>=1.7.0",
+    "xgboost>=3.0.2",
 ]
 
 [dependency-groups]

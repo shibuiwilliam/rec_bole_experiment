@@ -41,9 +41,7 @@ class ModelRegistry:
         "WideDeep",
         "DCN",
         "AutoInt",
-        "Pop",
-        "BPR",
-        "SASRec",
+        "LightGBM",
     ]
 
     @classmethod
@@ -115,11 +113,14 @@ class ModelRegistry:
             "DIEN": {"mlp_hidden_size": [128, 64], "gru_hidden_size": 64},
             "DSSM": {"mlp_hidden_size": [128, 64]},
             "LightGBM": {
-                "convert_token_to_onehot": True,
+                # Note: LightGBM may have dataset compatibility issues
+                # Error: 'Dataset' object has no attribute 'convert_col_list'
+                "convert_token_to_onehot": False,
                 "lgb_num_boost_round": 100,
                 "lgb_early_stopping_rounds": 10,
                 "lgb_silent": False,
                 "lgb_verbose_eval": 50,
+                "lgb_params": {},
             },
             # General recommender models
             "Pop": {"epochs": 1},
@@ -184,7 +185,7 @@ class ModelRegistry:
             "DIN": "Deep Interest Network (動的注意機構)",
             "DIEN": "Deep Interest Evolution Network (興味進化)",
             "DSSM": "Deep Structured Semantic Model (意味マッチング)",
-            "LightGBM": "Light Gradient Boosting Machine (勾配ブースティング)",
+            "LightGBM": "Light Gradient Boosting Machine (勾配ブースティング) - Note: May have compatibility issues",
             # General recommender models
             "Pop": "Popularity (人気度ベースライン)",
             "ItemKNN": "Item-based KNN (アイテム協調フィルタリング)",
