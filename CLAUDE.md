@@ -46,6 +46,9 @@ python -m src.main ranking_metrics
 
 # Click prediction example
 python -m src.main predict_click
+
+# Extract user x item features from trained FNN model
+python -m src.main extract_features --model-path saved/FNN-*.pth --data-type test --save-path outputs/fnn_features.npz --analyze-similarity
 ```
 
 ## CLI Interface
@@ -58,6 +61,7 @@ python -m src.main predict_click
 - `ranking_metrics`: Run ranking metrics comparison (default)
 - `custom_metrics`: Run custom metrics comparison
 - `predict_click`: Run click prediction example
+- `extract_features`: Extract user x item features from trained FNN model
 
 **Command-Line Options:**
 - `--job`: Select which job to run (required, with choices)
@@ -65,6 +69,13 @@ python -m src.main predict_click
 - `--eval-mode`: Choose evaluation mode: "labeled" or "full" (default: "labeled")
 - `--metrics`: Specify metrics (can be used multiple times)
 - `--models`: Specify models for custom comparison (can be used multiple times)
+
+**Feature Extraction Options:**
+- `--model-path`: Path to saved model file (required for extract_features)
+- `--data-type`: Data split to extract features from: "train", "valid", "test" (default: "test")
+- `--save-path`: Path to save extracted features (.npz or .csv format)
+- `--analyze-similarity`: Perform similarity analysis on extracted features
+- `--batch-size`: Batch size for feature extraction processing
 
 ## Architecture
 

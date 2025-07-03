@@ -206,5 +206,57 @@ def predict_click():
     experiment.predict_click_probability()
 
 
+@main.command("extract_features")
+@click.option("--model-path", required=True, help="学習済みモデルのパス")
+@click.option(
+    "--data-type",
+    default="test",
+    type=click.Choice(["train", "valid", "test"]),
+    help="特徴量を抽出するデータ種別",
+)
+@click.option("--save-path", help="特徴量保存パス (.npz または .csv)")
+@click.option(
+    "--analyze-similarity",
+    is_flag=True,
+    help="類似度分析を実行するかどうか",
+)
+@click.option("--batch-size", type=int, help="バッチサイズ")
+def extract_model_features(model_path, data_type, save_path, analyze_similarity, batch_size):
+    """学習済みFNNモデルからuser x item特徴量を抽出"""
+    print("RecBoleを使ったアイテムクリック予測モデル")
+    print("=" * 50)
+
+    # データセットの事前生成（特徴量抽出には不要だが、統一性のため）
+    print("\n=== データセット準備 ===")
+    users_df, items_df, interactions_df = DataGenerator.create_sample_data(
+        eval_mode="labeled"
+    )
+    dataset = Dataset(users_df, items_df, interactions_df)
+
+    # 実験インスタンスの作成（データセットを渡す）
+    experiment = ClickPredictionExperiment(dataset)
+
+    # 特徴量抽出を実行
+    try:
+        features = experiment.extract_model_features(
+            model_path=model_path,
+            data_type=data_type,
+            save_path=save_path,
+            analyze_similarity=analyze_similarity,
+        )
+        
+        print("\n=== 抽出結果サマリー ===")
+        print(f"サンプル数: {features['num_samples']}")
+        print(f"埋め込み次元: {features['embedding_dim']}")
+        print(f"MLP特徴量次元: {features['mlp_feature_dim']}")
+        
+        if save_path:
+            print(f"特徴量保存先: {save_path}")
+            
+    except Exception as e:
+        print(f"特徴量抽出に失敗しました: {e}")
+        return 1
+
+
 if __name__ == "__main__":
     main()
