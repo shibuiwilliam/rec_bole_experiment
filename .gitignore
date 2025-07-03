@@ -196,3 +196,4 @@ dataset/*
 log/*
 log_tensorboard/*
 saved/*
+outputs/*
